@@ -1,4 +1,3 @@
-
 @{
     ViewData["Title"] = "amahverification";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -17,7 +16,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.15.10/dist/sweetalert2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
     <style>
         body {
@@ -84,7 +82,6 @@
     <div class="main-container-css">
         <div class="section-title">HOSTEL VERIFICATION</div>
 
-        <!-- Hidden State Tracking -->
         <input type="hidden" id="hdnDisplay" />
         <input type="hidden" id="hdnData" />
         <input type="hidden" id="hdnFxd" />
@@ -101,7 +98,6 @@
         </div>
 
         <div class="table-responsive mb-3" id="pnl_disp">
-            <!-- Existing employees table injected here -->
         </div>
 
         <div class="text-center mb-4" id="rowRemove" style="display:none;">
@@ -149,7 +145,6 @@
         </div>
 
         <div class="table-responsive mb-3" id="Panel1">
-            <!-- New employees table injected here -->
         </div>
 
         <div class="row mb-3 align-items-center mt-4">
@@ -197,7 +192,6 @@
         const usr_id = '@ViewData["EmpCode"]';
         const firm_id = '@ViewData["FirmID"]';
         const branch_id = '@ViewData["BrID"]';
-
 
         function postApiUrl() {
             return window.location.hostname === "localhost"
@@ -422,12 +416,7 @@
             $('#txt_Ecod').val("");
         }
 
-        // Logic translation from legacy JS mapping string manipulation exactly
         function Verfyfxed(hkm, h, p) {
-            if (p === 1) {
-                // Legacy pop up trigger
-                // window.open('work_or_not.aspx?empcode='+h+'&Choice=2');
-            }
             var data = "";
             var rows = $('#hdnDisplay').val().split("!");
             for (var k = 0; k < rows.length - 1; k++) {
@@ -502,7 +491,6 @@
                 return false;
             }
 
-            // In full implementation, this triggers backend PLSQL 'Remove_Hostel_Emp'
             Swal.fire("Success", "Removal request logged for: " + removelist, "success");
         }
 
@@ -567,7 +555,6 @@
                 return false;
             }
 
-            // To submit files via AJAX, use FormData here.
             Swal.fire("Success", "Confirm action triggered.", "success");
         }
     </script>
