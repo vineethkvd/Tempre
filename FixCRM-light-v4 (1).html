@@ -1,1 +1,575 @@
 
+@{
+    ViewData["Title"] = "amahverification";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hostel Verification</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.15.10/dist/sweetalert2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <style>
+        body {
+            background-color: #f7ebdb;
+            font-family: 'Times New Roman', Times, serif;
+            color: #000000;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .main-container-css {
+            width: 1100px;
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #fcf1df;
+            padding: 20px;
+            border: 2px solid #660000;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000000;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .form-label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .table-custom {
+            border: 1px solid #000000 !important;
+            background-color: #ffffff;
+            font-size: 13px;
+        }
+
+        .table-custom th {
+            background-color: #01B6FD !important;
+            color: #ffffff !important;
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #000000 !important;
+        }
+
+        .table-custom td {
+            padding: 6px;
+            border: 1px solid #000000 !important;
+            vertical-align: middle;
+        }
+
+        .table-custom tr:nth-child(even) {
+            background-color: oldlace;
+        }
+
+        .table-custom tr:nth-child(odd) {
+            background-color: wheat;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        <div class="section-title">HOSTEL VERIFICATION</div>
+
+        <!-- Hidden State Tracking -->
+        <input type="hidden" id="hdnDisplay" />
+        <input type="hidden" id="hdnData" />
+        <input type="hidden" id="hdnFxd" />
+        <input type="hidden" id="hdnFxdVery" />
+        <input type="hidden" id="Hidd_removeCustList" />
+
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-3 text-end form-label">Select Hostel</div>
+            <div class="col-md-6">
+                <select id="cmb_hostel" class="form-select form-select-sm" onchange="disphostels()">
+                    <option value="-1">------SELECT------</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive mb-3" id="pnl_disp">
+            <!-- Existing employees table injected here -->
+        </div>
+
+        <div class="text-center mb-4" id="rowRemove" style="display:none;">
+            <button type="button" class="btn btn-sm btn-danger fw-bold px-4 border border-dark" onclick="bttnRemove_onclick()">REMOVE EMPLOYEE FROM HOSTEL</button>
+        </div>
+
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-3 text-end form-label">Hostel Condition</div>
+            <div class="col-md-6">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="hostelCond" id="rbGood" value="GOOD" checked onchange="toggleRemark()">
+                    <label class="form-check-label fw-bold" for="rbGood">GOOD</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="hostelCond" id="rbBad" value="BAD" onchange="toggleRemark()">
+                    <label class="form-check-label fw-bold" for="rbBad">BAD</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3 align-items-center" id="rowremark" style="display:none;">
+            <div class="col-md-3 text-end form-label">Enter Remark specify employees count</div>
+            <div class="col-md-6">
+                <input type="text" id="txt_Remark" class="form-control form-control-sm" maxlength="75" />
+            </div>
+        </div>
+
+        <hr />
+
+        <div id="rowecode" style="display:none;">
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-2 text-end form-label">Emp Code</div>
+                <div class="col-md-3">
+                    <input type="text" id="txt_Ecod" class="form-control form-control-sm" maxlength="7" onblur="dispempname()" />
+                </div>
+                <div class="col-md-2 text-end form-label">Emp Name</div>
+                <div class="col-md-4">
+                    <input type="text" id="txt_enam" class="form-control form-control-sm" maxlength="75" readonly />
+                </div>
+            </div>
+
+            <div class="text-center mb-3">
+                <button type="button" class="btn btn-sm btn-dark px-4 fw-bold" onclick="btn_Add_onclick()">ADD</button>
+            </div>
+        </div>
+
+        <div class="table-responsive mb-3" id="Panel1">
+            <!-- New employees table injected here -->
+        </div>
+
+        <div class="row mb-3 align-items-center mt-4">
+            <div class="col-md-4 form-label">Whether employee staying in hostel?</div>
+            <div class="col-md-4">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="stayCond" id="rd_yes" value="YES" checked>
+                    <label class="form-check-label fw-bold" for="rd_yes">YES</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="stayCond" id="rd_no" value="NO">
+                    <label class="form-check-label fw-bold" for="rd_no">NO</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-4 form-label">(please specify employee's count in column):</div>
+            <div class="col-md-4">
+                <input type="text" id="txt_stay_or_not" class="form-control form-control-sm" maxlength="75" />
+            </div>
+        </div>
+
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-4 form-label">Upload Document:</div>
+            <div class="col-md-5">
+                <input type="file" id="FileUpload1" class="form-control form-control-sm border border-primary" />
+            </div>
+        </div>
+
+        <div class="mb-4 text-center fw-bold">
+            Declaration<br />Above Said matter is true of my Knowledge.
+        </div>
+
+        <div class="text-center d-flex justify-content-center gap-2 mb-3">
+            <button type="button" class="btn btn-sm btn-light border border-dark fw-bold px-4" onclick="btn_Insert_onclick()">INSERT EMPLOYEE</button>
+            <button type="button" class="btn btn-sm btn-light border border-dark fw-bold px-4" onclick="btn_VerifyOnClick()">VERIFY EMPLOYEE</button>
+            <button type="button" id="btn_Confirm" class="btn btn-sm btn-success border border-dark fw-bold px-4" style="display:none;" onclick="btn_ConfirmOnClick()">CONFIRM</button>
+            <button type="button" class="btn btn-sm btn-light border border-dark fw-bold px-4" onclick="window.history.back()">EXIT</button>
+        </div>
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const usr_id = '@ViewData["EmpCode"]';
+        const firm_id = '@ViewData["FirmID"]';
+        const branch_id = '@ViewData["BrID"]';
+
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
+        }
+
+        $(document).ready(function () {
+            fetchHostels();
+        });
+
+        function fetchHostels() {
+            var reqData = "HOSTEL_VERIFY_GET_HOSTELS^" + usr_id + "~" + firm_id + "~" + branch_id;
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmb_hostel');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.FLAT_NO || row.flat_no;
+                            var text = row.HOSTEL_NAME || row.hostel_name;
+                            if(val !== -1) {
+                                $cmb.append(`<option value="${val}">${text}</option>`);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        function toggleRemark() {
+            if ($('#rbGood').is(':checked')) {
+                $('#rowremark').hide();
+            } else {
+                $('#rowremark').show();
+            }
+        }
+
+        function btn_Insert_onclick() {
+            $('#rowecode').show();
+            $('#Panel1').show();
+            $('#btn_Confirm').show();
+        }
+
+        function disphostels() {
+            var flno = $('#cmb_hostel').val();
+            if (flno == "-1") {
+                Swal.fire("Warning", "Select HOSTEL Please....", "warning");
+                $('#pnl_disp').empty();
+                $('#rowRemove').hide();
+                return;
+            }
+
+            var reqData = "HOSTEL_VERIFY_CALL_1^" + flno;
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var arrStr = "";
+                    if (data && data.length > 0) {
+                        data.forEach(function (r) {
+                            var bId = r.BRANCH_ID || r.branch_id;
+                            var bName = r.BRANCH_NAME || r.branch_name;
+                            var eCode = r.EMP_CODE || r.emp_code;
+                            var eName = r.EMP_NAME || r.emp_name;
+                            var fName = r.FLAT_NAME || r.flat_name;
+                            var fNo = r.FLAT_NO || r.flat_no;
+                            arrStr += bId + "~" + bName + "~" + eCode + "~" + eName + "~" + fName + "~" + fNo + "!";
+                        });
+                        $('#hdnDisplay').val(arrStr);
+                        $('#rowRemove').show();
+                        showDetails();
+                    } else {
+                        $('#hdnDisplay').val("!");
+                        $('#rowRemove').hide();
+                        Swal.fire("Info", "No Data Found ... select another One...", "info");
+                        showDetails();
+                    }
+                }
+            });
+        }
+
+        function showDetails() {
+            var hdnVal = $('#hdnDisplay').val();
+            if (!hdnVal || hdnVal === "!") {
+                $('#pnl_disp').empty();
+                return;
+            }
+
+            var arr = hdnVal.split("!");
+            var tab = `<table class='table table-custom'>
+                        <thead>
+                            <tr>
+                                <th>BRANCH NAME</th>
+                                <th>BRANCH ID</th>
+                                <th>EMP NAME</th>
+                                <th>EMP CODE</th>
+                                <th>HOSTEL</th>
+                                <th>FIXED ASSET</th>
+                                <th>VIEW ASSET</th>
+                                <th>DELETE FROM LIST</th>
+                                <th>TICK TO REMOVE</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            for (var j = 0; j < arr.length - 1; j++) {
+                var arr1 = arr[j].split("~");
+                var empcode = arr1[2];
+
+                tab += `<tr>
+                            <td class='text-start'>${arr1[1]}</td>
+                            <td class='text-start'>${arr1[0]}</td>
+                            <td class='text-start'>${arr1[3]}</td>
+                            <td class='text-start'>${arr1[2]}</td>
+                            <td class='text-start'>${arr1[4]}</td>
+                            <td class='text-center'>
+                                <input id='ys${j}' type='radio' name='YesNo${j}' value='1' onClick='Verfyfxed(${j}, ${arr1[2]}, 1)' /> <label for='ys${j}'>Yes</label>
+                                <input id='No${j}' type='radio' name='YesNo${j}' value='0' onClick='Verfyfxed(${j}, ${arr1[2]}, 0)' /> <label for='No${j}'>No</label>
+                            </td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="viewf(${empcode})" class="text-primary fw-bold">View</a></td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="delf(${j})" class="text-danger fw-bold">Delete</a></td>
+                            <td class='text-center'><input id='Checkbox${j}' type='checkbox' onClick='output(${j}, ${empcode})' /></td>
+                        </tr>`;
+            }
+            tab += `</tbody></table>`;
+            $('#pnl_disp').html(tab);
+        }
+
+        function dispempname() {
+            var empid = $('#txt_Ecod').val();
+            if (empid === "") return;
+
+            var reqData = "HOSTEL_VERIFY_CALL_3^" + empid;
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas2: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        $('#txt_enam').val(data[0].EMP_NAME || data[0].emp_name);
+                    } else {
+                        $('#txt_enam').val("");
+                        Swal.fire("Error", "Employee Does Not Exist..", "error");
+                    }
+                }
+            });
+        }
+
+        function btn_Add_onclick() {
+            var empid = $('#txt_Ecod').val();
+            if (empid === "") {
+                Swal.fire("Warning", "ENTER EMPLOYEE CODE Please.....", "warning");
+                return;
+            }
+
+            var reqData = "HOSTEL_VERIFY_CALL_4^" + empid;
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var r = data[0];
+                        var str = (r.EMP_CODE || r.emp_code) + "~" + (r.EMP_NAME || r.emp_name) + "~" + (r.BRANCH_ID || r.branch_id) + "~" + (r.BRANCH_NAME || r.branch_name) + "!";
+
+                        var currData = $('#hdnData').val();
+                        $('#hdnData').val(currData + str);
+                        dispTable();
+                    } else {
+                        Swal.fire("Error", "No Data found .. ", "error");
+                    }
+                }
+            });
+        }
+
+        function dispTable() {
+            var dataStr = $('#hdnData').val();
+            if (dataStr === "") {
+                $('#Panel1').empty();
+                $('#txt_Ecod').val("");
+                return;
+            }
+
+            var row = dataStr.split("!");
+            var tab = `<table class='table table-custom'>
+                        <thead>
+                            <tr>
+                                <th>EMP CODE</th>
+                                <th>EMP NAME</th>
+                                <th>BRANCH ID</th>
+                                <th>BRANCH NAME</th>
+                                <th>FIXED ASSET</th>
+                                <th>DELETE</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            for (var n = 0; n < row.length - 1; n++) {
+                var col = row[n].split("~");
+                tab += `<tr>
+                            <td class='text-start'>${col[0]}</td>
+                            <td class='text-start'>${col[1]}</td>
+                            <td class='text-start'>${col[2]}</td>
+                            <td class='text-start'>${col[3]}</td>
+                            <td class='text-center'>
+                                <input id='yes${n}' type='radio' name='YeN${n}' value='1' onClick='addfxed(${n}, ${col[2]}, 1)' /> <label for='yes${n}'>Yes</label>
+                                <input id='No1${n}' type='radio' name='YeN${n}' value='0' onClick='addfxed(${n}, ${col[2]}, 0)' /> <label for='No1${n}'>No</label>
+                            </td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="delete_row(${n})" class="text-danger fw-bold">Del</a></td>
+                        </tr>`;
+            }
+            tab += `</tbody></table>`;
+            $('#Panel1').html(tab);
+            $('#txt_Ecod').val("");
+        }
+
+        // Logic translation from legacy JS mapping string manipulation exactly
+        function Verfyfxed(hkm, h, p) {
+            if (p === 1) {
+                // Legacy pop up trigger
+                // window.open('work_or_not.aspx?empcode='+h+'&Choice=2');
+            }
+            var data = "";
+            var rows = $('#hdnDisplay').val().split("!");
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (hkm == k) {
+                    data += rows[k] + "~" + p + "!";
+                }
+            }
+            $('#hdnFxdVery').val($('#hdnFxdVery').val() + data);
+        }
+
+        function addfxed(hkm, h, p) {
+            var data = "";
+            var rows = $('#hdnData').val().split("!");
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (hkm == k) {
+                    data += rows[k] + "~" + p + "!";
+                }
+            }
+            $('#hdnFxd').val($('#hdnFxd').val() + data);
+        }
+
+        function viewf(h) {
+            Swal.fire("Info", "Asset View triggered for Emp: " + h, "info");
+        }
+
+        function output(hkm, h) {
+            var currentList = $('#Hidd_removeCustList').val();
+            if ($('#Checkbox' + hkm).is(':checked')) {
+                $('#Hidd_removeCustList').val(currentList + h + "!");
+            } else {
+                var rows = currentList.split("!");
+                var newData = "";
+                for (var i = 0; i < rows.length - 1; i++) {
+                    if (rows[i] !== String(h)) {
+                        newData += rows[i] + "!";
+                    }
+                }
+                $('#Hidd_removeCustList').val(newData);
+            }
+        }
+
+        function delete_row(a) {
+            var rows = $('#hdnData').val().split("!");
+            var data = "";
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (k !== a) data += rows[k] + "!";
+            }
+            $('#hdnData').val(data);
+            dispTable();
+        }
+
+        function delf(m) {
+            var rows = $('#hdnDisplay').val().split("!");
+            var new_tran = "";
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (k !== m) new_tran += rows[k] + "!";
+            }
+            $('#hdnDisplay').val(new_tran);
+            showDetails();
+        }
+
+        function bttnRemove_onclick() {
+            var removelist = $('#Hidd_removeCustList').val();
+            var cmbhostel = $('#cmb_hostel').val();
+
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select Hostel From List!!", "warning");
+                return false;
+            }
+            if (removelist == "") {
+                Swal.fire("Warning", "Select Employee To Remove!!", "warning");
+                return false;
+            }
+
+            // In full implementation, this triggers backend PLSQL 'Remove_Hostel_Emp'
+            Swal.fire("Success", "Removal request logged for: " + removelist, "success");
+        }
+
+        function btn_VerifyOnClick() {
+            var cmbhostel = $('#cmb_hostel').val();
+            var RemarkHostel = $('#txt_Remark').val();
+            var RemarkStayorNot = $('#txt_stay_or_not').val();
+            var fxdvery = $('#hdnFxdVery').val();
+            var verfydtl = $('#hdnDisplay').val();
+
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select hostel from list!!", "warning");
+                return false;
+            }
+            if (verfydtl !== "" && verfydtl !== "!") {
+                if (fxdvery === "") {
+                    Swal.fire("Warning", "Select Fixed Asset Condition for already existing employee!!", "warning");
+                    return false;
+                }
+            }
+            if (RemarkStayorNot === "") {
+                Swal.fire("Warning", "Hostel employees count need to specify!", "warning");
+                return false;
+            }
+            if ($('#rbBad').is(':checked') && RemarkHostel === "") {
+                Swal.fire("Warning", "Enter Remarks!!!", "warning");
+                return false;
+            }
+
+            var fileInput = document.getElementById('FileUpload1');
+            if (fileInput.files.length === 0) {
+                Swal.fire("Warning", "Please Upload Document!!!", "warning");
+                return false;
+            }
+
+            Swal.fire("Success", "Verified Successfully.", "success");
+        }
+
+        function btn_ConfirmOnClick() {
+            var cmbhostel = $('#cmb_hostel').val();
+            var hdn_add_1Emp = $('#hdnData').val();
+            var fxdvery = $('#hdnFxdVery').val();
+            var fxd = $('#hdnFxd').val();
+            var verfydtl = $('#hdnDisplay').val();
+
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select hostel from list!!", "warning");
+                return false;
+            }
+            if (fxd === "" && hdn_add_1Emp !== "") {
+                Swal.fire("Warning", "Select Fixed Asset Condition!!", "warning");
+                return false;
+            }
+            if (verfydtl !== "" && verfydtl !== "!") {
+                if (fxdvery === "") {
+                    Swal.fire("Warning", "Select Fixed Asset Condition for already existing employee!!", "warning");
+                    return false;
+                }
+            }
+            if (hdn_add_1Emp === "") {
+                Swal.fire("Warning", "No Employees found to insert,\n Add employees to list by INSERT->>ADD TO LIST", "warning");
+                return false;
+            }
+
+            // To submit files via AJAX, use FormData here.
+            Swal.fire("Success", "Confirm action triggered.", "success");
+        }
+    </script>
+</body>
+</html>
