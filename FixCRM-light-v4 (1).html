@@ -1,4 +1,3 @@
-
 @{
     ViewData["Title"] = "CancelHostel";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -75,7 +74,6 @@
         <input type="hidden" id="hidVal" value="0" />
         <input type="hidden" id="hidFlatNo" />
 
-        <!-- Row: Yes/No Options -->
         <div class="row mb-3 p-2" style="border: 1px solid #999999; background-color: #fff;" id="rowYesNo">
             <div class="col-md-6 text-center">
                 <input class="form-check-input" type="radio" name="cancelType" id="radProposal" value="1" onchange="stayInHostel()">
@@ -87,7 +85,6 @@
             </div>
         </div>
 
-        <!-- Row: Search Options -->
         <div class="row mb-3 p-2" style="border: 1px solid #999999; background-color: #fff; display:none;" id="rowSearch">
             <div class="col-md-6 text-center">
                 <input class="form-check-input" type="radio" name="searchType" id="radNumber" onchange="searchFlat()">
@@ -99,7 +96,6 @@
             </div>
         </div>
 
-        <!-- Row 1: Flat No Search -->
         <div class="row align-items-center detail-row" id="row1" style="display:none;">
             <div class="col-md-4 text-end form-label">Flat No :</div>
             <div class="col-md-5">
@@ -107,7 +103,6 @@
             </div>
         </div>
 
-        <!-- Row 2: Flat Name Search -->
         <div class="row align-items-center detail-row" id="row2" style="display:none;">
             <div class="col-md-4 text-end form-label">Flat Name :</div>
             <div class="col-md-6">
@@ -116,7 +111,6 @@
             </div>
         </div>
 
-        <!-- Result Details Section -->
         <div id="detailsSection" style="display:none;">
 
             <div class="row align-items-center detail-row">
@@ -192,14 +186,12 @@
         const firm_id = '@ViewData["FirmID"]';
         const branch_id = '@ViewData["BrID"]';
 
-
         function postApiUrl() {
             return window.location.hostname === "localhost"
                 ? "/Others/postAPIData"
                 : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
         }
 
-        // Logic equivalent to stayInHostel()
         function stayInHostel() {
             if ($('#radProposal').is(':checked')) {
                 $('#hidVal').val("1");
@@ -276,7 +268,6 @@
             executeSearch(reqData, optType, flatNo);
         }
 
-        // Shared Logic for FromServer(Case 1 & 2)
         function executeSearch(reqData, optType, searchFlatNo) {
             $.ajax({
                 type: "POST",
@@ -288,7 +279,6 @@
                     if (data && data.length > 0) {
                         var row = data[0];
 
-                        // Extract based on column index map provided in the VB code
                         var flatName = Object.values(row)[0];
                         var flatNo = Object.values(row)[1];
                         var branchName = Object.values(row)[2];
@@ -305,26 +295,24 @@
                         $('#txtAdvanceAmt').val(advanceAmt);
                         $('#txtRentAmt').val(rentAmt);
 
-                        if (optType === "1") { // Proposal Cancel
-                            $('#row10').show();  // Show Pending Days
+                        if (optType === "1") {
+                            $('#row10').show();
                             $('#txtPendDays').val(pendingDays);
-                            $('#row6').hide();   // Hide Agreement From/To
-                        } else {               // Cancel Hostel
-                            $('#row10').hide();  // Hide Pending Days
-                            $('#row6').show();   // Show Agreement From/To
+                            $('#row6').hide();
+                        } else {
+                            $('#row10').hide();
+                            $('#row6').show();
 
                             var aggFrom = Object.values(row)[7];
                             var aggTo = Object.values(row)[8];
 
-                            // Basic date format handling
                             $('#txtFrom').val(aggFrom ? aggFrom.split('T')[0] : '');
                             $('#txtTo').val(aggTo ? aggTo.split('T')[0] : '');
                         }
 
-                        // Toggle Readonly flat display fields based on search type
                         if ($('#radNumber').is(':checked')) {
-                            $('#row8').hide(); // txtFlNoDisplay row
-                            $('#row4').show(); // txtFlatNameDisplay row
+                            $('#row8').hide();
+                            $('#row4').show();
                         } else {
                             $('#row8').show();
                             $('#row4').hide();
@@ -362,7 +350,6 @@
 
             var flatId = $('#hidFlatNo').val();
             var valOpt = $('#hidVal').val();
-
 
             Swal.fire({
                 title: 'Are you sure?',
