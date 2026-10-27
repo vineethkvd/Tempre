@@ -55,27 +55,27 @@
             font-size: 13px;
         }
 
-            .table-custom th {
-                background-color: #01B6FD !important;
-                color: #ffffff !important;
-                text-align: center;
-                padding: 8px;
-                border: 1px solid #000000 !important;
-            }
+        .table-custom th {
+            background-color: #01B6FD !important;
+            color: #ffffff !important;
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #000000 !important;
+        }
 
-            .table-custom td {
-                padding: 6px;
-                border: 1px solid #000000 !important;
-                vertical-align: middle;
-            }
+        .table-custom td {
+            padding: 6px;
+            border: 1px solid #000000 !important;
+            vertical-align: middle;
+        }
 
-            .table-custom tr:nth-child(even) {
-                background-color: oldlace;
-            }
+        .table-custom tr:nth-child(even) {
+            background-color: oldlace;
+        }
 
-            .table-custom tr:nth-child(odd) {
-                background-color: wheat;
-            }
+        .table-custom tr:nth-child(odd) {
+            background-color: wheat;
+        }
     </style>
 </head>
 <body>
@@ -204,7 +204,7 @@
         });
 
         function fetchHostels() {
-            var reqData = "HOSTEL_VERIFY_GET_HOSTELS^" + usr_id + "~" + firm_id + "~" + branch_id +"^1";
+            var reqData = "HOSTEL_VERIFY_GET_HOSTELS^" + usr_id + "~" + firm_id + "~" + branch_id + "^1";
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
@@ -215,7 +215,6 @@
                     var $cmb = $('#cmb_hostel');
                     if (data && data.length > 0) {
                         data.forEach(function (row) {
-                           
                             var val = row.FLAT_NO || row.flat_no;
                             var text = row.HOSTEL_NAME || row.hostel_name;
                             if(val !== -1) {
@@ -250,7 +249,7 @@
                 return;
             }
 
-            var reqData = "HOSTEL_VERIFY_CALL_1^" + flno +"^1";
+            var reqData = "HOSTEL_VERIFY_CALL_1^" + flno + "^1";
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
@@ -332,7 +331,7 @@
             var empid = $('#txt_Ecod').val();
             if (empid === "") return;
 
-            var reqData = "HOSTEL_VERIFY_CALL_3^" + empid +"^1";
+            var reqData = "HOSTEL_VERIFY_CALL_3^" + empid + "^1";
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
@@ -356,7 +355,7 @@
                 return;
             }
 
-            var reqData = "HOSTEL_VERIFY_CALL_4^" + empid+"^1";
+            var reqData = "HOSTEL_VERIFY_CALL_4^" + empid + "^1";
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
