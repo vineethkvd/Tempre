@@ -1,429 +1,456 @@
-@{
-    ViewData["Title"] = "CancelHostel";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+// Automatic FlutterFlow imports
+import '/backend/schema/structs/index.dart';
+import '/actions/actions.dart' as action_blocks;
+import "package:custom_code_widgets_jf41ty/backend/schema/structs/index.dart"
+    as custom_code_widgets_jf41ty_data_schema;
+import "package:custom_code_widgets_jf41ty/backend/schema/enums/enums.dart"
+    as custom_code_widgets_jf41ty_enums;
+import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import '/custom_code/widgets/index.dart';
+import '/custom_code/actions/index.dart';
+import '/flutter_flow/custom_functions.dart';
+import 'package:flutter/material.dart';
+// Begin custom widget code
+// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
+
+import 'dart:typed_data';
+import 'package:data_table_2/data_table_2.dart';
+import 'package:provider/provider.dart';
+import 'package:excel/excel.dart' as ex;
+import 'package:file_saver/file_saver.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+class PldgInvTableModel {
+  int? rOWNUM;
+  String? pLEDGENO;
+  String? tRADT;
+  int? pLEDGEVAL;
+  int? tOTNUM;
+  String? sTICKERNO;
+  double? tAREWEIGHT;
+  double? gW;
+  int? sTONEWT;
+  double? nETWEIGHT;
+  int? kDMCOUNT;
+  String? kDMITEM;
+  double? kDMWEIGHT;
+  int? wSCOUNT;
+  String? wSITEM;
+  double? wSWEIGHT;
+  int? wISCOUNT;
+  String? wISITEM;
+  double? wISWEIGHT;
+  String? iNVENTORY;
+  String? cUSTID;
+  String? rISK;
+  String? rISKREASON;
+
+  PldgInvTableModel({
+    this.rOWNUM,
+    this.pLEDGENO,
+    this.tRADT,
+    this.pLEDGEVAL,
+    this.tOTNUM,
+    this.sTICKERNO,
+    this.tAREWEIGHT,
+    this.gW,
+    this.sTONEWT,
+    this.nETWEIGHT,
+    this.kDMCOUNT,
+    this.kDMITEM,
+    this.kDMWEIGHT,
+    this.wSCOUNT,
+    this.wSITEM,
+    this.wSWEIGHT,
+    this.wISCOUNT,
+    this.wISITEM,
+    this.wISWEIGHT,
+    this.iNVENTORY,
+    this.cUSTID,
+    this.rISK,
+    this.rISKREASON,
+  });
+
+  PldgInvTableModel.fromJson(Map<String, dynamic> json) {
+    rOWNUM = json['ROWNUM']?.toInt();
+    pLEDGEVAL = json['PLEDGE_VAL']?.toInt();
+    tOTNUM = json['TOT_NUM']?.toInt();
+    sTONEWT = json['STONEWT']?.toInt();
+    kDMCOUNT = json['KDMCOUNT']?.toInt();
+    wSCOUNT = json['WSCOUNT']?.toInt();
+    wISCOUNT = json['WISCOUNT']?.toInt();
+    tAREWEIGHT = json['TARE_WEIGHT']?.toDouble();
+    gW = json['GW']?.toDouble();
+    nETWEIGHT = json['NET_WEIGHT']?.toDouble();
+    kDMWEIGHT = json['KDMWEIGHT']?.toDouble();
+    wSWEIGHT = json['WSWEIGHT']?.toDouble();
+    wISWEIGHT = json['WISWEIGHT']?.toDouble();
+    pLEDGENO = json['PLEDGE_NO']?.toString();
+    tRADT = json['TRA_DT']?.toString();
+    sTICKERNO = json['STICKER_NO']?.toString();
+    kDMITEM = json['KDMITEM']?.toString();
+    wSITEM = json['WSITEM']?.toString();
+    wISITEM = json['WISITEM']?.toString();
+    iNVENTORY = json['INVENTORY']?.toString();
+    cUSTID = json['CUST_ID']?.toString();
+    rISK = json['RISK']?.toString();
+    rISKREASON = json['RISK_REASON']?.toString();
+  }
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cancel Hostel</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
-    <link rel="stylesheet" href="~/css/index.css" />
+class PledgeInvRptTableProvider extends ChangeNotifier {
+  List<PldgInvTableModel> data = [];
+  double totalPledgeVal = 0;
+  double totalTWt = 0;
+  double totalGW = 0;
+  double totalSWt = 0;
+  double totalNWt = 0;
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.15.10/dist/sweetalert2.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  List<String> headers = [
+    "SLNo~PledgeNo~Customer Id~Inventory Id~PledgeDate~PledgeVal~Item Count~Sticker No~T.wt~G.W~S.Wt~N.Wt~KDM~WithOut Soldering~Soldering~Category~Reason",
+  ];
 
-    <style>
-        body {
-            background-color: #e9ecef;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
+  void setData(List<dynamic> rawList) {
+    data = rawList
+        .whereType<Map<String, dynamic>>()
+        .map(PldgInvTableModel.fromJson)
+        .toList();
+
+    totalPledgeVal = data.fold(0, (sum, item) => sum + (item.pLEDGEVAL ?? 0));
+    totalTWt = data.fold(0, (sum, item) => sum + (item.tAREWEIGHT ?? 0));
+    totalGW = data.fold(0, (sum, item) => sum + (item.gW ?? 0));
+    totalSWt = data.fold(0, (sum, item) => sum + (item.sTONEWT ?? 0));
+    totalNWt = data.fold(0, (sum, item) => sum + (item.nETWEIGHT ?? 0));
+
+    notifyListeners();
+  }
+}
+
+class PledgeInvRptDataTable extends StatefulWidget {
+  final double? width;
+  final double? height;
+  final List<dynamic> initialData;
+
+  const PledgeInvRptDataTable({
+    super.key,
+    this.width,
+    this.height,
+    required this.initialData,
+  });
+
+  @override
+  State<PledgeInvRptDataTable> createState() => _PledgeInvRptDataTableState();
+}
+
+String formatDate(String? dateStr) {
+  if (dateStr == null || dateStr.isEmpty) return '';
+  try {
+    DateTime dateTime = DateTime.parse(dateStr);
+    return DateFormat('dd-MM-yyyy').format(dateTime);
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+class _PledgeInvRptDataTableState extends State<PledgeInvRptDataTable> {
+  String formatValue(dynamic val) {
+    if (val == null) return '';
+    if (val is num) return val.toInt().toString();
+    return val.toString();
+  }
+
+  Future<void> _exportToExcel(PledgeInvRptTableProvider provider) async {
+    try {
+      var excel = ex.Excel.createExcel();
+      ex.Sheet sheet = excel['Sheet1'];
+
+      List<String> headers = [
+        "SLNo", "PledgeNo", "Customer Id", "Inventory Id", "PledgeDate",
+        "PledgeVal", "Item Count", "Sticker No", "T.wt", "G.W", "S.Wt", "N.Wt",
+        "Description", "KDM Count", "Without Soldering", "Risk Category", "Risk Reason"
+      ];
+
+      sheet.appendRow(headers.map((e) => ex.TextCellValue(e)).toList());
+
+      for (int i = 0; i < provider.data.length; i++) {
+        var item = provider.data[i];
+        sheet.appendRow([
+          ex.TextCellValue('${i + 1}'),
+          ex.TextCellValue(item.pLEDGENO ?? ''),
+          ex.TextCellValue(item.cUSTID ?? ''),
+          ex.TextCellValue(item.iNVENTORY ?? ''),
+          ex.TextCellValue(formatDate(item.tRADT)),
+          ex.TextCellValue(formatValue(item.pLEDGEVAL)),
+          ex.TextCellValue(formatValue(item.tOTNUM)),
+          ex.TextCellValue(item.sTICKERNO ?? ''),
+          ex.TextCellValue('${item.tAREWEIGHT ?? ''}'),
+          ex.TextCellValue('${item.gW ?? ''}'),
+          ex.TextCellValue('${item.sTONEWT ?? ''}'),
+          ex.TextCellValue('${item.nETWEIGHT ?? ''}'),
+          ex.TextCellValue(item.kDMITEM ?? ''),
+          ex.TextCellValue(formatValue(item.kDMCOUNT)),
+          ex.TextCellValue(item.wISITEM ?? ''),
+          ex.TextCellValue(item.rISK ?? ''),
+          ex.TextCellValue(item.rISKREASON ?? ''),
+        ]);
+      }
+
+      sheet.appendRow([
+        ex.TextCellValue('Totals ${provider.data.length}'),
+        ex.TextCellValue(''), ex.TextCellValue(''), ex.TextCellValue(''), ex.TextCellValue(''),
+        ex.TextCellValue(provider.totalPledgeVal.toStringAsFixed(0)),
+        ex.TextCellValue(''), ex.TextCellValue(''),
+        ex.TextCellValue(provider.totalTWt.toStringAsFixed(2)),
+        ex.TextCellValue(provider.totalGW.toStringAsFixed(2)),
+        ex.TextCellValue(provider.totalSWt.toStringAsFixed(2)),
+        ex.TextCellValue(provider.totalNWt.toStringAsFixed(2)),
+        ex.TextCellValue(''), ex.TextCellValue(''), ex.TextCellValue(''), ex.TextCellValue(''), ex.TextCellValue('')
+      ]);
+
+      var fileBytes = excel.save();
+      if (fileBytes != null) {
+        await FileSaver.instance.saveFile(
+          name: 'PledgeInventoryReport',
+          bytes: Uint8List.fromList(fileBytes),
+          ext: 'xlsx',
+          mimeType: MimeType.microsoftExcel,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Excel Exported Successfully')));
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to export Excel: $e')));
+      }
+    }
+  }
 
-        .main-container-css {
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-            background-color: #f4f6f9;
-            padding: 20px;
-            border: 1px solid #ccc;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-        }
+  Future<void> _exportToPdf(PledgeInvRptTableProvider provider) async {
+    try {
+      final doc = pw.Document();
 
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #ffffff;
-            border: 1px solid #b0bec5;
-        }
+      final headers = [
+        "SLNo", "PledgeNo", "Customer Id", "Inventory Id", "PledgeDate",
+        "PledgeVal", "Count", "Sticker", "T.wt", "G.W", "S.Wt", "N.Wt",
+        "Description", "KDM", "W/O Solder", "Risk", "Reason"
+      ];
 
-        .table-custom th {
-            background-color: #85c1e9 !important;
-            color: #000000;
-            text-align: center;
-            font-weight: bold;
-            font-size: 16px;
-            padding: 8px;
-            border: 1px solid #b0bec5;
-            text-decoration: underline;
-        }
+      final data = provider.data.asMap().entries.map((entry) {
+        final i = entry.key;
+        final item = entry.value;
+        return [
+          '${i + 1}',
+          item.pLEDGENO ?? '',
+          item.cUSTID ?? '',
+          item.iNVENTORY ?? '',
+          formatDate(item.tRADT),
+          formatValue(item.pLEDGEVAL),
+          formatValue(item.tOTNUM),
+          item.sTICKERNO ?? '',
+          '${item.tAREWEIGHT ?? ''}',
+          '${item.gW ?? ''}',
+          '${item.sTONEWT ?? ''}',
+          '${item.nETWEIGHT ?? ''}',
+          item.kDMITEM ?? '',
+          formatValue(item.kDMCOUNT),
+          item.wISITEM ?? '',
+          item.rISK ?? '',
+          item.rISKREASON ?? '',
+        ];
+      }).toList();
 
-        .table-custom td {
-            border: 1px solid #b0bec5;
-            padding: 8px 15px;
-            vertical-align: middle;
-            font-size: 14px;
-        }
+      data.add([
+        'Totals ${provider.data.length}', '', '', '', '',
+        provider.totalPledgeVal.toStringAsFixed(0), '', '',
+        provider.totalTWt.toStringAsFixed(2),
+        provider.totalGW.toStringAsFixed(2),
+        provider.totalSWt.toStringAsFixed(2),
+        provider.totalNWt.toStringAsFixed(2),
+        '', '', '', '', ''
+      ]);
 
-        .label-cell {
-            text-align: right;
-            font-weight: bold;
-            width: 35%;
-            background-color: #fdfdfd;
-        }
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a3.landscape,
+          margin: const pw.EdgeInsets.all(20),
+          build: (context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text("Pledge Inventory Report", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Table.fromTextArray(
+              headers: headers,
+              data: data,
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+              headerDecoration: pw.BoxDecoration(color: PdfColors.grey200),
+            ),
+          ],
+        ),
+      );
 
-        .input-cell {
-            width: 65%;
-        }
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => doc.save(),
+        name: 'PledgeInventoryReport',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to export PDF: $e')));
+      }
+    }
+  }
 
-        .form-control-sm, .form-select-sm {
-            border: 1px solid #999;
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 13px;
-            width: 80%;
-            background-color: #f1f8ff;
-        }
-        
-        .readonly-field {
-            background-color: #e9ecef !important;
-            cursor: not-allowed;
-        }
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle smallStyle = TextStyle(fontSize: 12);
+    final TextStyle smallBold = TextStyle(fontSize: 12, fontWeight: FontWeight.bold);
 
-        .btn-confirm {
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-            width: 120px;
-        }
+    return ChangeNotifierProvider(
+      create: (_) => PledgeInvRptTableProvider()..setData(widget.initialData),
+      child: Consumer<PledgeInvRptTableProvider>(
+        builder: (context, provider, child) {
+          if (provider.data.isEmpty) {
+            return const Center(child: Text('No data available'));
+          }
 
-        .btn-exit {
-            background-color: #d81b60;
-            color: white;
-            border: none;
-            width: 120px;
-        }
-    </style>
-</head>
-<body>
-    <div class="main-container-css">
-        <input type="hidden" id="hidVal" value="0" />
-        <input type="hidden" id="hidFlatNo" />
-
-        <table class="table-custom">
-            <thead>
-                <tr>
-                    <th colspan="2">CANCEL HOSTEL</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="rowYesNo">
-                    <td class="text-center" style="width: 50%;">
-                        <input class="form-check-input me-2" type="radio" name="cancelType" id="radProposal" value="1" onchange="stayInHostel()">
-                        <label class="form-check-label fw-bold" for="radProposal">Proposal Cancel</label>
-                    </td>
-                    <td class="text-center" style="width: 50%;">
-                        <input class="form-check-input me-2" type="radio" name="cancelType" id="radHostel" value="2" onchange="stayInHostel()">
-                        <label class="form-check-label fw-bold" for="radHostel">Cancel Hostel</label>
-                    </td>
-                </tr>
-
-                <tr id="rowSearch" style="display:none;">
-                    <td class="text-center">
-                        <input class="form-check-input me-2" type="radio" name="searchType" id="radNumber" onchange="searchFlat()">
-                        <label class="form-check-label fw-bold" for="radNumber">Search By Flat No</label>
-                    </td>
-                    <td class="text-center">
-                        <input class="form-check-input me-2" type="radio" name="searchType" id="radName" onchange="searchFlatName()">
-                        <label class="form-check-label fw-bold" for="radName">Search By Flat Name</label>
-                    </td>
-                </tr>
-
-                <tr id="row1" style="display:none;">
-                    <td class="label-cell">Flat No :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtFlatNoSearch" class="form-control-sm" maxlength="5" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onchange="getFlatNoDetails()" />
-                    </td>
-                </tr>
-
-                <tr id="row2" style="display:none;">
-                    <td class="label-cell">Flat Name :</td>
-                    <td class="input-cell">
-                        <select id="cmbFlatName" class="form-select-sm" onchange="getFlatNameDetails()"></select>
-                    </td>
-                </tr>
-
-                <tr class="detail-row" style="display:none;">
-                    <td class="label-cell">Branch Name :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtBranchName" class="form-control-sm readonly-field" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row8" style="display:none;">
-                    <td class="label-cell">Flat No :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtFlNoDisplay" class="form-control-sm readonly-field" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row4" style="display:none;">
-                    <td class="label-cell">Flat Name :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtFlatNameDisplay" class="form-control-sm readonly-field" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" style="display:none;">
-                    <td class="label-cell">Owner Name :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtOwner" class="form-control-sm readonly-field" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row9" style="display:none;">
-                    <td class="text-center" colspan="2" style="padding: 10px 0;">
-                        <span class="fw-bold me-2">Advance :</span>
-                        <input type="text" id="txtAdvanceAmt" class="form-control-sm readonly-field d-inline-block me-5" style="width: 25%;" readonly />
-                        
-                        <span class="fw-bold me-2">Rent :</span>
-                        <input type="text" id="txtRentAmt" class="form-control-sm d-inline-block" style="width: 25%;" />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row6" style="display:none;">
-                    <td class="text-center" colspan="2" style="padding: 10px 0;">
-                        <span class="fw-bold me-2">Agreement From :</span>
-                        <input type="text" id="txtFrom" class="form-control-sm readonly-field d-inline-block me-4" style="width: 25%;" readonly />
-                        
-                        <span class="fw-bold me-2">Agreement To :</span>
-                        <input type="text" id="txtTo" class="form-control-sm readonly-field d-inline-block" style="width: 25%;" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row10" style="display:none;">
-                    <td class="label-cell">Pending Days :</td>
-                    <td class="input-cell">
-                        <input type="text" id="txtPendDays" class="form-control-sm readonly-field" readonly />
-                    </td>
-                </tr>
-
-                <tr class="detail-row" id="row7" style="display:none;">
-                    <td colspan="2" class="text-center" style="padding: 15px;">
-                        <button type="button" class="btn btn-confirm fw-bold px-4 me-4" id="btnConfirm" onclick="btnConfirmOnclick()">CONFIRM</button>
-                        <button type="button" class="btn btn-exit fw-bold px-4" onclick="window.history.back()">EXIT</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <script>
-        const root = '@ViewData["root"]';
-        const usr_id = '@ViewData["EmpCode"]';
-        const firmId = '@ViewData["FirmID"]';
-        const branch_id = '@ViewData["BrID"]';
-
-        function postApiUrl() {
-            return window.location.hostname === "localhost"
-                ? "/Others/postAPIData"
-                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
-        }
-
-        function stayInHostel() {
-            if ($('#radProposal').is(':checked')) {
-                $('#hidVal').val("1");
-            } else if ($('#radHostel').is(':checked')) {
-                $('#hidVal').val("2");
-            }
-
-            $('#rowSearch').show();
-            $('.detail-row').hide();
-            $('#row1, #row2').hide();
-            $('#radNumber, #radName').prop('checked', false);
-        }
-
-        function searchFlat() {
-            $('#row1').show();
-            $('#row2').hide();
-            $('.detail-row').hide();
-            $('#txtFlatNoSearch').val("");
-        }
-
-        function searchFlatName() {
-            $('#row1').hide();
-            $('#row2').show();
-            $('.detail-row').hide();
-
-            var optType = $('#hidVal').val();
-            var reqData = "CANCEL_HOSTEL_FILL_COMBO^" + optType + "~" + firmId  + "^1";
-
-            $.ajax({
-                type: "POST",
-                url: postApiUrl(),
-                data: { datas: reqData },
-                success: function (res) {
-                    var data = typeof res === "string" ? JSON.parse(res) : res;
-                    var $cmb = $('#cmbFlatName');
-                    $cmb.empty();
-
-                    if (data && data.length > 0) {
-                        data.forEach(function (row) {
-                            var vals = Object.values(row);
-                            var val = vals[0];
-                            var text = vals[1];
-                            $cmb.append(`<option value="${val}">${text}</option>`);
-                        });
-                    } else {
-                        Swal.fire("Info", "No Hostel to Cancel", "info");
-                    }
-                }
-            });
-        }
-
-        function getFlatNoDetails() {
-            var flatNo = $('#txtFlatNoSearch').val();
-            if (flatNo === '') {
-                Swal.fire("Warning", "Please ..Enter Flat No !!", "warning");
-                return false;
-            }
-
-            var optType = $('#hidVal').val();
-            var reqData = "CANCEL_HOSTEL_SEARCH_FLAT_NO^" + flatNo + "~" + optType + "~" + firmId  + "^1";
-            executeSearch(reqData, optType);
-        }
-
-        function getFlatNameDetails() {
-            var flatNo = $('#cmbFlatName').val();
-            if (flatNo == "-1" || !flatNo) {
-                Swal.fire("Warning", "Please ..Select Flat Name !!", "warning");
-                return false;
-            }
-
-            var optType = $('#hidVal').val();
-            var reqData = "CANCEL_HOSTEL_SEARCH_FLAT_NAME^" + flatNo + "~" + optType + "~" + firmId  + "^1";
-            executeSearch(reqData, optType);
-        }
-
-        function executeSearch(reqData, optType) {
-            $.ajax({
-                type: "POST",
-                url: postApiUrl(),
-                data: { datas: reqData },
-                success: function (res) {
-                    var data = typeof res === "string" ? JSON.parse(res) : res;
-
-                    if (data && data.length > 0) {
-                        var row = data[0];
-
-                        var flatName = Object.values(row)[0];
-                        var flatNo = Object.values(row)[1];
-                        var branchName = Object.values(row)[2];
-                        var ownerName = Object.values(row)[3];
-                        var advanceAmt = Object.values(row)[4];
-                        var rentAmt = Object.values(row)[5];
-                        var pendingDays = Object.values(row)[6];
-
-                        $('#txtFlatNameDisplay').val(flatName);
-                        $('#txtFlNoDisplay').val(flatNo);
-                        $('#hidFlatNo').val(flatNo);
-                        $('#txtBranchName').val(branchName);
-                        $('#txtOwner').val(ownerName);
-                        $('#txtAdvanceAmt').val(advanceAmt);
-                        $('#txtRentAmt').val(rentAmt);
-
-                        $('.detail-row').show();
-
-                        if (optType === "1") {
-                            $('#row10').show();
-                            $('#txtPendDays').val(pendingDays);
-                            $('#row6').hide();
-                        } else {
-                            $('#row10').hide();
-                            $('#row6').show();
-                            var aggFrom = Object.values(row)[7];
-                            var aggTo = Object.values(row)[8];
-                            $('#txtFrom').val(aggFrom ? aggFrom.split('T')[0] : '');
-                            $('#txtTo').val(aggTo ? aggTo.split('T')[0] : '');
-                        }
-
-                        if ($('#radNumber').is(':checked')) {
-                            $('#row8').hide();
-                            $('#row4').show();
-                        } else {
-                            $('#row8').show();
-                            $('#row4').hide();
-                        }
-                    } else {
-                        Swal.fire("Error", "Please ..Enter Correct Flat No !!", "error");
-                        $('.detail-row').hide();
-                    }
-                }
-            });
-        }
-
-        function btnConfirmOnclick() {
-            if (!$('#radProposal').is(':checked') && !$('#radHostel').is(':checked')) {
-                Swal.fire("Warning", "Select Cancel Type", "warning");
-                return false;
-            }
-            if (!$('#radNumber').is(':checked') && !$('#radName').is(':checked')) {
-                Swal.fire("Warning", "Select Flat Type", "warning");
-                return false;
-            }
-            if ($('#radName').is(':checked') && $('#cmbFlatName').val() == "-1") {
-                Swal.fire("Warning", "Select Flat Name", "warning");
-                return false;
-            }
-            if ($('#radNumber').is(':checked')) {
-                var txtFlat = $('#txtFlatNoSearch').val();
-                if (txtFlat === "" || txtFlat == "0") {
-                    Swal.fire("Warning", "Enter Flat Number", "warning");
-                    return false;
-                }
-            }
-
-            var flatId = $('#hidFlatNo').val();
-            var valOpt = $('#hidVal').val();
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you want to confirm this cancellation?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#2c3e50',
-                cancelButtonColor: '#d81b60',
-                confirmButtonText: 'Yes, Confirm!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    var reqData = "Proc_cancel_hostel^" + flatId + "~" + valOpt + "^1";
-                    
-                    $.ajax({
-                        type: "POST",
-                        url: postApiUrl(),
-                        data: { datas: reqData },
-                        success: function (res) {
-                            var data = typeof res === "string" ? JSON.parse(res) : res;
-                            if (data && data.length > 0) {
-                                var status = data[0].STATUS || data[0].status;
-                                var msg = data[0].RES || data[0].res || "Cannot Cancel This Hostel";
-                                
-                                if (status == 1) {
-                                    Swal.fire("Success", "Hostel Canceled", "success").then(() => {
-                                        window.history.back();
-                                    });
-                                } else {
-                                    Swal.fire("Error", msg, "error").then(() => {
-                                        window.history.back();
-                                    });
-                                }
-                            } else {
-                                Swal.fire("Error", "Failed to process cancellation.", "error");
-                            }
-                        },
-                        error: function () {
-                            Swal.fire("Error", "Server connection failed.", "error");
-                        }
-                    });
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.table_view, size: 18, color: Colors.white),
+                        label: const Text('Export Excel', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () => _exportToExcel(provider),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.picture_as_pdf, size: 18, color: Colors.white),
+                        label: const Text('Export PDF', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () => _exportToPdf(provider),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DataTable2(
+                      columnSpacing: 10,
+                      horizontalMargin: 10,
+                      minWidth: 2200,
+                      headingRowHeight: 40,
+                      dataRowHeight: 38,
+                      fixedColumnsColor: Colors.grey.shade100,
+                      headingRowColor: WidgetStatePropertyAll(Colors.blueGrey.shade50),
+                      columns: [
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.M),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.M),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.M),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.M),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('PACKET(Weight in gms)', style: smallStyle), size: ColumnSize.L),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.S),
+                        DataColumn2(label: Text('Description(Item Name)', style: smallStyle), fixedWidth: 200, size: ColumnSize.S),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.L),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.M),
+                        DataColumn2(label: Text('Risk category and reason', style: smallStyle), size: ColumnSize.L),
+                        DataColumn2(label: Text('', style: smallStyle), size: ColumnSize.L),
+                      ],
+                      rows: [
+                        ...provider.headers.map((entry) {
+                          final parts = entry.split('~');
+                          return DataRow2(
+                            color: WidgetStateProperty.all(Colors.blueGrey.withOpacity(0.05)),
+                            cells: parts.map((value) => DataCell(Text(value, style: smallStyle))).toList(),
+                          );
+                        }).toList(),
+                        ...provider.data.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          return DataRow2(
+                            cells: [
+                              DataCell(Text('${index + 1}', style: smallStyle)),
+                              DataCell(Text("${item.pLEDGENO ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.cUSTID ?? ''}", style: smallStyle)),
+                              DataCell(Text(item.iNVENTORY ?? '', style: smallStyle)),
+                              DataCell(Text(formatDate(item.tRADT), style: smallStyle)),
+                              DataCell(Text('${item.pLEDGEVAL ?? ''}', style: smallStyle)),
+                              DataCell(Text('${item.tOTNUM ?? ''}', style: smallStyle)),
+                              DataCell(Text("${item.sTICKERNO ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.tAREWEIGHT ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.gW ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.sTONEWT ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.nETWEIGHT ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.kDMITEM ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.kDMCOUNT ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.wISITEM ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.rISK ?? ''}", style: smallStyle)),
+                              DataCell(Text("${item.rISKREASON ?? ''}", style: smallStyle)),
+                            ],
+                          );
+                        }),
+                        DataRow2(
+                          color: WidgetStatePropertyAll(Colors.blueGrey.shade50),
+                          cells: [
+                            DataCell(Text('Totals ${provider.data.length}', style: smallBold)),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            DataCell(Text(provider.totalPledgeVal.toStringAsFixed(0), style: smallBold)),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            DataCell(Text(provider.totalTWt.toStringAsFixed(2), style: smallBold)),
+                            DataCell(Text(provider.totalGW.toStringAsFixed(2), style: smallBold)),
+                            DataCell(Text(provider.totalSWt.toStringAsFixed(2), style: smallBold)),
+                            DataCell(Text(provider.totalNWt.toStringAsFixed(2), style: smallBold)),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                            const DataCell(Text('')),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
