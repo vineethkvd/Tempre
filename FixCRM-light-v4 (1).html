@@ -1,1 +1,1269 @@
 
+Imports System.Data
+Imports System.Data.OracleClient
+Imports System.IO
+Partial Class Hostel_amahverification
+
+    Inherits System.Web.UI.Page
+    Implements System.Web.UI.ICallbackEventHandler
+    Dim strResult As New System.Text.StringBuilder
+    Dim callbackResult As String
+    Dim oh As New helper.oracle.OracleHelper
+    Dim CH As New WholeHelper.ClsComCtrl
+    Dim dt, dt1 As New DataTable
+    Dim sql, sql1 As String
+    Dim dr As DataRow
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+
+        Dim usr_id
+        usr_id = Session("user_id").ToString.Split("!")
+        Dim firmid As Integer = Session("firm_id")
+
+        Me.Master.subtitle = "HOSTEL MODULE"
+
+        If firmid <> 24 Then
+
+            If Session("branch_id") <> 0 Then
+                sql = "select count(*) from employee_master t where t.post_id in (197,136,131,134,141) and t.firm_id not in(16,24) and t.status_id=1 and t.emp_code='" & usr_id(0) & "' and t.firm_id=" & Session("firm_id") & ""
+                dt = oh.ExecuteDataSet(sql).Tables(0)
+                If dt.Rows(0)(0) > 0 Then
+                    sql = "select -1 as Flat_no, '------SELECT------' as Hostel_Name, '--' HostName from dual union all select distinct r.flat_no Flat_no , r.flat_no ||' | '||upper(r.flat_name)Hostel_Name , upper(r.flat_name) HostName from branch_detail t, tbl_rent_building_mst r where r.branch_id <> 0   and t.BRANCH_ID = r.branch_id   and r.rent_category_id not in (1, 11, 12) and r.status_id<>3 and t.area_id in(select distinct b.area_id from emp_master a,branch_detail b where a.BRANCH_ID=b.BRANCH_ID and   a.POST_ID in(197,136,131,134,141) and a.STATUS_ID=1 and a.EMP_CODE like'%" & usr_id(0) & "%') order by HostName"
+                    'sql = "select -1 as Flat_no, '------SELECT------' as Hostel_Name from dual union all select distinct r.flat_no, r.flat_name from branch_detail t, tbl_rent_building_mst r where r.branch_id<>0 and t.BRANCH_ID = r.branch_id and r.rent_category_id not in(1,11,12) and t.area_head like '%" & usr_id(0) & "%' group by r.flat_no, r.flat_name"
+                    dt = oh.ExecuteDataSet(sql).Tables(0)
+                    If Not IsPostBack Then
+                        CH.ComboFill(Me.cmb_hostel, dt, 0, 1)
+                    End If
+                End If
+            ElseIf Session("branch_id") = 0 Then
+                sql = "select count(*) from mana0809.status_master t  where t.module_id=898  and t.option_id=1 and t.description= (" & usr_id(0) & ")"
+                dt = oh.ExecuteDataSet(sql).Tables(0)
+                If dt.Rows(0)(0) > 0 Then
+                    sql = "select -1 as Flat_no, '------SELECT------' as Hostel_Name,'--' HostName  from dual union all select distinct r.flat_no Flat_no, r.flat_no || ' | ' || upper(r.flat_name) Hostel_Name, upper(r.flat_name) HostName from mana0809.branch_detail t, mana0809.tbl_rent_building_mst r    where r.branch_id <> 0    and t.BRANCH_ID = r.branch_id and r.rent_category_id not in (1, 11, 12) and r.status_id <> 3  and t.area_id = 723"
+                    dt = oh.ExecuteDataSet(sql).Tables(0)
+                    If Not IsPostBack Then
+                        CH.ComboFill(Me.cmb_hostel, dt, 0, 1)
+                    End If
+                Else
+                    sql = "select count(*) from mana0809.status_master t  where t.module_id=898  and t.option_id=1 and t.description= (" & usr_id(0) & ")"
+                    dt = oh.ExecuteDataSet(sql).Tables(0)
+                    If dt.Rows(0)(0) > 0 Then
+                        sql = "select -1 as Flat_no, '------SELECT------' as Hostel_Name,'--' HostName  from dual union all select distinct r.flat_no Flat_no, r.flat_no || ' | ' || upper(r.flat_name) Hostel_Name, upper(r.flat_name) HostName from mana0809.branch_detail t, mana0809.tbl_rent_building_mst r    where r.branch_id <> 0    and t.BRANCH_ID = r.branch_id and r.rent_category_id not in (1, 11, 12) and r.status_id <> 3  and t.area_id = 723"
+                        dt = oh.ExecuteDataSet(sql).Tables(0)
+                        If Not IsPostBack Then
+                            CH.ComboFill(Me.cmb_hostel, dt, 0, 1)
+                        End If
+                    Else
+                        sql = "select count(*) from form_accessibility t where t.FORM_ID in (505) AND T.EMP_ID IN (" & usr_id(0) & ")"
+                        dt = oh.ExecuteDataSet(sql).Tables(0)
+                        If dt.Rows(0)(0) > 0 Then
+                            sql = "select -1 as Flat_no, '------SELECT------' as Hostel_Name,'--' HostName  from dual union all select distinct r.flat_no Flat_no , r.flat_no ||' | '||upper(r.flat_name) Hostel_Name, upper(r.flat_name) HostName  from branch_detail t, tbl_rent_building_mst r where r.branch_id <> 0 order by HostName"
+                            dt = oh.ExecuteDataSet(sql).Tables(0)
+                            If Not IsPostBack Then
+                                CH.ComboFill(Me.cmb_hostel, dt, 0, 1)
+                            End If
+                        End If
+                    End If
+                End If
+
+                End If
+        ElseIf firmid = 24 Then
+
+            sql1 = "select count(*) from employee_master t where t.post_id in (271) and t.firm_id in(24) and t.status_id=1 and t.emp_code='" & usr_id(0) & "' and t.firm_id=" & Session("firm_id") & ""
+            dt1 = oh.ExecuteDataSet(sql1).Tables(0)
+            If dt1.Rows(0)(0) > 0 Then
+                sql1 = "select -1 as Flat_no, '------SELECT------' as Hostel_Name from dual union all select distinct r.flat_no, r.flat_name from branch_detail t, tbl_rent_building_mst r,emp_master s where r.branch_id <> 0 and t.BRANCH_ID = r.branch_id and r.rent_category_id not in (1, 11, 12)and r.status_id <> 3 and s.BRANCH_ID=r.branch_id and s.STATUS_ID=1 and s.EMP_CODE like'%" & usr_id(0) & "%' group by r.flat_no, r.flat_name"
+                dt1 = oh.ExecuteDataSet(sql1).Tables(0)
+                If Not IsPostBack Then
+                    CH.ComboFill(Me.cmb_hostel, dt1, 0, 1)
+                End If
+            End If
+
+        Else
+            Dim str As New StringBuilder
+            str.Append("alert('You are not authorised to view this page');")
+            str.Append("window.open('../home.aspx','_self');")
+            Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "ret_v", str.ToString, True)
+        End If
+
+        Dim script_val As String
+        script_val = "var header;" & "header='" & Me.txt_Remark.ClientID & "';"
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "val", script_val, True)
+        Me.ClientScript.RegisterClientScriptInclude("validationscript", "../script/Validations.js")
+        Dim cbref As String = Page.ClientScript.GetCallbackEventReference(Me, "arg", "callreceiver", "context")
+        Dim cbscript As String = "function callserver (arg,context) {" & cbref & ";}"
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "callserver", cbscript, True)
+
+        Me.cmb_hostel.Attributes.Add("onblur", "disphostels()")
+
+        'Me.txt_Ecod.Attributes.Add("on_blur", "dispempname()")
+    End Sub
+
+    Public Function GetCallbackResult() As String Implements System.Web.UI.ICallbackEventHandler.GetCallbackResult
+        Return callbackResult
+    End Function
+
+    Public Sub RaiseCallbackEvent(ByVal eventArgument As String) Implements System.Web.UI.ICallbackEventHandler.RaiseCallbackEvent
+        Dim data() As String = eventArgument.Split(CChar("#"))
+        Dim kk As String
+        Select Case (data(0))
+            Case 1
+
+                sql = "select distinct b.branch_id||'~'||b.BRANCH_NAME||'~'||t.emp_code||'~'||e.emp_name||'~'||r.flat_name||'~'||r.flat_no from tbl_rent_hostel t, tbl_rent_building_mst r,employee_master e,branch_detail b where t.flat_no = " & data(1) & " and t.flat_no = r.flat_no and e.emp_code=t.emp_code and b.BRANCH_ID=r.branch_id and (t.status is null or t.status IN (1,5,7) and  t.check_out_date is null ) group by b.branch_id,b.BRANCH_NAME,t.emp_code,r.flat_name,r.flat_no,e.emp_name"
+                dt = oh.ExecuteDataSet(sql).Tables(0)
+                strResult.Append("1")
+                strResult.Append("#")
+                If dt.Rows.Count > 0 Then
+                    For Each dr In dt.Rows
+                        strResult.Append(dr(0))
+                        strResult.Append("!")
+                    Next
+                Else
+                    strResult.Append("4")
+                    strResult.Append("!")
+                End If
+
+                'Case 2
+
+                '    sql = "select count(*) from tbl_rent_hostel t where t.flat_no = " & data(2) & ""
+                '    dt = oh.ExecuteDataSet(sql).Tables(0)
+                '    If dt.Rows(0)(0) > 0 Then
+                '        Try
+                '            sql = "Update tbl_rent_hostel r set option_id=3,VERIFY_DT=sysdate,HOSTEL_REM='" & data(1) & "',VERIFY_EMPLOY='" & Session("user_id") & "',hostel_condition= '" & data(3) & "' where r.FLAT_NO=" & data(2) & ""
+                '            oh.ExecuteNonQuery(sql)
+                '            strResult.Append("3#SuccessFully Verified,")
+                '        Catch ex As Exception
+                '            strResult.Append("3#")
+                '            strResult.Append(ex.Message)
+                '        End Try
+
+                '    End If
+
+            Case 3
+                sql = "select distinct e.EMP_NAME from emp_master e where e.EMP_CODE = " & data(1) & " "
+                dt = oh.ExecuteDataSet(sql).Tables(0)
+                strResult.Append("1")
+                If dt.Rows.Count > 0 Then
+                    strResult.Append("#")
+                    strResult.Append(dt.Rows(0)(0))
+                Else
+                    strResult.Append("#")
+                End If
+
+            Case 4
+                sql = "select distinct e.emp_code || '~' || e.EMP_NAME || '~' || e.branch_id|| '~' || b.branch_name from emp_master e,branch_master b  where e.EMP_CODE = " & data(1) & " and b.branch_id=e.branch_id"
+                dt = oh.ExecuteDataSet(sql).Tables(0)
+                strResult.Append("1")
+                If dt.Rows.Count > 0 Then
+                    strResult.Append("#")
+                    strResult.Append(dt.Rows(0)(0))
+
+                Else
+                    strResult.Append("!")
+                End If
+
+            Case 6
+
+                Try
+                    Dim Parameter(5) As OracleParameter
+
+                    Parameter(0) = New OracleParameter("RemoveData", OracleType.VarChar, 4000)
+                    Parameter(0).Direction = ParameterDirection.Input
+                    Parameter(0).Value = CStr(data(1))
+
+                    Parameter(1) = New OracleParameter("FLATNO", OracleType.Number, 20)
+                    Parameter(1).Direction = ParameterDirection.Input
+                    Parameter(1).Value = CDbl(data(2))
+
+                    Parameter(2) = New OracleParameter("ERR_STAT", OracleType.Number, 1)
+                    Parameter(2).Direction = ParameterDirection.Output
+
+                    Parameter(3) = New OracleParameter("ERR_MSG", OracleType.VarChar, 500)
+                    Parameter(3).Direction = ParameterDirection.Output
+
+                    Parameter(4) = New OracleParameter("USERID", OracleType.VarChar, 50)
+                    Parameter(4).Direction = ParameterDirection.Input
+                    Parameter(4).Value = Session("user_id")
+
+                    Parameter(5) = New OracleParameter("FIRMID", OracleType.Number, 5)
+                    Parameter(5).Direction = ParameterDirection.Input
+                    Parameter(5).Value = Session("firm_id")
+
+                    oh.ExecuteNonQuery("Remove_Hostel_Emp", Parameter)
+
+                    kk = Parameter(3).Value
+
+                Catch ex As Exception
+
+                    kk = ex.Message.ToString()
+
+                End Try
+
+                strResult.Append("1")
+                strResult.Append("#")
+                strResult.Append(kk)
+
+        End Select
+        callbackResult = strResult.ToString
+    End Sub
+
+    Protected Sub btn_Confirm_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btn_Confirm.Click
+        If FileUpload1.HasFile = False Then
+            Dim cl_script1 As New StringBuilder
+            cl_script1.Append(" alert('Please Upload Document!!!');")
+            Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv", cl_script1.ToString, True)
+            txt_enam.Text = ""
+            Exit Sub
+
+
+        End If
+
+
+
+
+
+
+        Dim hos_cong As String = 0
+        Dim hos_conb As String = 0
+        Dim cl_script As New StringBuilder
+        Dim kk As String
+        If Me.RadioButton1.Checked = True Then
+            hos_cong = 1
+        End If
+        If Me.RadioButton2.Checked = True Then
+            hos_conb = 1
+        End If
+        If Me.hdnFxd.Value = "" Then
+
+            cl_script.Append(" alert('Select Employee!!!');")
+            Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv", cl_script.ToString, True)
+            Exit Sub
+        End If
+        Dim Parameter(9) As OracleParameter
+        Try
+
+
+            Parameter(0) = New OracleParameter("DATASTR", OracleType.VarChar, 4000)
+            Parameter(0).Direction = ParameterDirection.Input
+            Parameter(0).Value = Me.hdnFxd.Value
+
+            Parameter(1) = New OracleParameter("FLATNO", OracleType.Number, 20)
+            Parameter(1).Direction = ParameterDirection.Input
+            Parameter(1).Value = CInt(Me.cmb_hostel.SelectedValue)
+
+            Parameter(2) = New OracleParameter("ERR_STAT", OracleType.Number, 1)
+            Parameter(2).Direction = ParameterDirection.Output
+
+            Parameter(3) = New OracleParameter("ERR_MSG", OracleType.VarChar, 500)
+            Parameter(3).Direction = ParameterDirection.Output
+
+            Parameter(4) = New OracleParameter("USERID", OracleType.VarChar, 50)
+            Parameter(4).Direction = ParameterDirection.Input
+            Parameter(4).Value = Session("user_id")
+
+            Parameter(5) = New OracleParameter("FIRMID", OracleType.Number, 5)
+            Parameter(5).Direction = ParameterDirection.Input
+            Parameter(5).Value = Session("firm_id")
+
+            Parameter(6) = New OracleParameter("HOST_COND_G", OracleType.VarChar, 1000)
+            Parameter(6).Direction = ParameterDirection.Input
+            Parameter(6).Value = hos_cong
+
+            Parameter(7) = New OracleParameter("HOST_COND_B", OracleType.VarChar, 1000)
+            Parameter(7).Direction = ParameterDirection.Input
+            Parameter(7).Value = hos_conb
+
+            Parameter(8) = New OracleParameter("REMA", OracleType.VarChar, 1000)
+            Parameter(8).Direction = ParameterDirection.Input
+            Parameter(8).Value = CStr(Me.txt_Remark.Text)
+
+            Parameter(9) = New OracleParameter("DATASTR1", OracleType.VarChar, 4000)
+            Parameter(9).Direction = ParameterDirection.Input
+            Parameter(9).Value = Me.hdnFxdVery.Value
+
+            oh.ExecuteNonQuery("add_hostel_emp", Parameter)
+
+
+
+
+            If (Me.FileUpload1.HasFile = True) Then
+                Dim FileName As String = Me.FileUpload1.FileName
+                Dim FileExtension As String = System.IO.Path.GetExtension(Me.FileUpload1.PostedFile.FileName)
+                Dim fnm As String
+                Dim cp As String = Me.Server.MapPath(Me.Request.ApplicationPath)
+                fnm = GetUniqueFilename(cp + "\image\" + "Test" + FileExtension)
+                Me.FileUpload1.SaveAs(fnm)
+
+                Dim fs As New IO.FileStream(fnm, IO.FileMode.Open)
+                Dim Data() As Byte = New [Byte](fs.Length) {}
+                fs.Read(Data, 0, fs.Length)
+                Dim user = Session("user_id").ToString.Split("!")
+
+                'Dim sql As String = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC) values (:BlobParameter)"
+                sql = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC,HOSTEL_ID, VERIFIED_BY, VERIFIED_DT)   values(:BlobParameter, " & Me.cmb_hostel.SelectedValue.ToString & " ," & user(0) & ",sysdate)"
+                Dim parm_coll(0) As OracleParameter
+                parm_coll(0) = New OracleParameter
+                parm_coll(0).ParameterName = "BlobParameter"
+                parm_coll(0).OracleType = OracleType.Blob
+                parm_coll(0).Direction = ParameterDirection.Input
+                parm_coll(0).Value = Data
+                oh.ExecuteNonQuery(sql, parm_coll)
+                fs.Close()
+                File.Delete(fnm)
+
+            Else
+                MsgBox("Browse a file to Upload")
+                FileUpload1.Focus()
+                Exit Sub
+            End If
+
+
+
+
+
+
+
+
+
+            kk = Parameter(3).Value
+
+
+
+
+
+        Catch ex As Exception
+
+            kk = ex.Message.ToString()
+
+        End Try
+
+
+        cl_script.Append(" alert('" & kk & "');")
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv", cl_script.ToString, True)
+
+        Me.hd_sts.Value = ""
+        Me.hdnDisplay.Value = ""
+        Me.hdnData.Value = ""
+        Me.hdnFxdVery.Value = ""
+        Me.hdnFxd.Value = ""
+        Me.txt_Ecod.Text = ""
+        Me.txt_enam.Text = ""
+        Me.txt_stay_or_not.Text = ""
+
+    End Sub
+
+    Protected Sub btn_Verify_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btn_Verify.Click
+        If FileUpload1.HasFile = False Then
+            Dim cl_script1 As New StringBuilder
+            cl_script1.Append(" alert('Please Upload Document!!!');")
+            Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv", cl_script1.ToString, True)
+            txt_enam.Text = ""
+            Exit Sub
+
+
+        End If
+
+
+
+
+
+
+
+        Dim hos_cong As String = 0
+        Dim hos_conb As String = 0
+        Dim stay_orNot As Integer = 0
+        Dim kk As String
+
+        If Me.RadioButton1.Checked = True Then
+            hos_cong = 1
+        End If
+        If Me.RadioButton2.Checked = True Then
+            hos_conb = 1
+        End If
+
+
+        If Me.rd_yes.Checked = True Then
+            stay_orNot = 1
+        Else
+            stay_orNot = 0
+        End If
+
+        If Me.rd_no.Checked = True Then
+            stay_orNot = 2
+        Else
+            stay_orNot = 1
+        End If
+
+
+        Dim Parameter(8) As OracleParameter
+
+        Try
+
+            Parameter(0) = New OracleParameter("FLATNO", OracleType.VarChar, 20)
+            Parameter(0).Direction = ParameterDirection.Input
+            Parameter(0).Value = Me.cmb_hostel.SelectedValue
+
+            Parameter(1) = New OracleParameter("DATASTR", OracleType.VarChar, 4000)
+            Parameter(1).Direction = ParameterDirection.Input
+            Parameter(1).Value = Me.hdnFxdVery.Value
+
+            Parameter(2) = New OracleParameter("ERR_STAT", OracleType.Number, 1)
+            Parameter(2).Direction = ParameterDirection.Output
+
+            Parameter(3) = New OracleParameter("ERR_MSG", OracleType.VarChar, 100)
+            Parameter(3).Direction = ParameterDirection.Output
+
+            Parameter(4) = New OracleParameter("USERID", OracleType.VarChar, 50)
+            Parameter(4).Direction = ParameterDirection.Input
+            Parameter(4).Value = Session("user_id")
+
+            Parameter(5) = New OracleParameter("FIRMID", OracleType.Number, 5)
+            Parameter(5).Direction = ParameterDirection.Input
+            Parameter(5).Value = Session("firm_id")
+
+            Parameter(6) = New OracleParameter("HOST_COND_G", OracleType.VarChar, 1000)
+            Parameter(6).Direction = ParameterDirection.Input
+            Parameter(6).Value = hos_cong
+
+            Parameter(7) = New OracleParameter("HOST_COND_B", OracleType.VarChar, 1000)
+            Parameter(7).Direction = ParameterDirection.Input
+            Parameter(7).Value = hos_conb
+
+            Parameter(8) = New OracleParameter("REMA", OracleType.VarChar, 1000)
+            Parameter(8).Direction = ParameterDirection.Input
+            Parameter(8).Value = CStr(Me.txt_Remark.Text) & "®" & stay_orNot & "®" & CStr(Me.txt_stay_or_not.Text)
+
+
+
+            oh.ExecuteNonQuery("PROC_HOSTEL_AHVERIFICATION", Parameter)
+
+
+            If (Me.FileUpload1.HasFile = True) Then
+                Dim FileName As String = Me.FileUpload1.FileName
+                Dim FileExtension As String = System.IO.Path.GetExtension(Me.FileUpload1.PostedFile.FileName)
+                Dim fnm As String
+                Dim cp As String = Me.Server.MapPath(Me.Request.ApplicationPath)
+                fnm = GetUniqueFilename(cp + "\image\" + "Test" + FileExtension)
+                Me.FileUpload1.SaveAs(fnm)
+
+                Dim fs As New IO.FileStream(fnm, IO.FileMode.Open)
+                Dim Data() As Byte = New [Byte](fs.Length) {}
+                fs.Read(Data, 0, fs.Length)
+                Dim user = Session("user_id").ToString.Split("!")
+
+                'Dim sql As String = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC) values (:BlobParameter)"
+                sql = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC,HOSTEL_ID, VERIFIED_BY, VERIFIED_DT)   values(:BlobParameter, " & Me.cmb_hostel.SelectedValue.ToString & " ," & user(0) & ",sysdate)"
+                Dim parm_coll(0) As OracleParameter
+                parm_coll(0) = New OracleParameter
+                parm_coll(0).ParameterName = "BlobParameter"
+                parm_coll(0).OracleType = OracleType.Blob
+                parm_coll(0).Direction = ParameterDirection.Input
+                parm_coll(0).Value = Data
+                oh.ExecuteNonQuery(sql, parm_coll)
+                fs.Close()
+                File.Delete(fnm)
+
+            Else
+                MsgBox("Browse a file to Upload")
+                FileUpload1.Focus()
+                Exit Sub
+            End If
+
+
+
+
+
+
+
+
+
+
+
+            kk = Parameter(3).Value
+
+
+
+
+        Catch ex As Exception
+
+            kk = ex.Message.ToString()
+
+        End Try
+
+        Dim cl_script As New StringBuilder
+        cl_script.Append(" alert('" & kk & "');")
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv", cl_script.ToString, True)
+
+    End Sub
+
+
+    Protected Sub cmb_hostel_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles cmb_hostel.SelectedIndexChanged
+
+    End Sub
+
+    'Protected Sub Button1_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles Button1.Click
+    '    hd_sts.Value = 1
+    '    If (Me.FileUpload1.HasFile = True) Then
+    '        Dim FileName As String = Me.FileUpload1.FileName
+    '        Dim FileExtension As String = System.IO.Path.GetExtension(Me.FileUpload1.PostedFile.FileName)
+    '        Dim fnm As String
+    '        Dim cp As String = Me.Server.MapPath(Me.Request.ApplicationPath)
+    '        fnm = GetUniqueFilename(cp + "\image\" + "Test" + FileExtension)
+    '        Me.FileUpload1.SaveAs(fnm)
+
+    '        Dim fs As New IO.FileStream(fnm, IO.FileMode.Open)
+    '        Dim Data() As Byte = New [Byte](fs.Length) {}
+    '        fs.Read(Data, 0, fs.Length)
+    '        Dim user = Session("user_id").ToString.Split("!")
+
+    '        'Dim sql As String = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC) values (:BlobParameter)"
+    '        sql = "insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD(FULL_DOC,HOSTEL_ID, VERIFIED_BY, VERIFIED_DT)   values(:BlobParameter, " & Me.cmb_hostel.SelectedValue.ToString & " ," & user(0) & ",sysdate)"
+    '        Dim parm_coll(0) As OracleParameter
+    '        parm_coll(0) = New OracleParameter
+    '        parm_coll(0).ParameterName = "BlobParameter"
+    '        parm_coll(0).OracleType = OracleType.Blob
+    '        parm_coll(0).Direction = ParameterDirection.Input
+    '        parm_coll(0).Value = Data
+    '        oh.ExecuteNonQuery(sql, parm_coll)
+    '        fs.Close()
+    '        File.Delete(fnm)
+
+    '    Else
+    '        MsgBox("Browse a file to Upload")
+    '        FileUpload1.Focus()
+    '        Exit Sub
+    '    End If
+    'End Sub
+
+    Public Function GetUniqueFilename(ByVal FileName As String) As String
+        Dim count As Integer = 0
+        Dim Name As String = ""
+        If System.IO.File.Exists(FileName) Then
+            Dim f As New System.IO.FileInfo(FileName)
+            If Not String.IsNullOrEmpty(f.Extension) Then
+                Name = f.FullName.Substring(0, f.FullName.LastIndexOf("."))
+            Else
+                Name = f.FullName
+            End If
+            While System.IO.File.Exists(FileName)
+                count += 1
+                FileName = Name + count.ToString() + f.Extension
+            End While
+        End If
+        Return FileName
+    End Function
+End Class
+<%@ Page Language="VB" MasterPageFile="~/edp.master" AutoEventWireup="false" CodeFile="amahverification.aspx.vb" Inherits="Hostel_amahverification" title="HostelVerification.hkm" %>
+
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc1" %>
+<%@ MasterType VirtualPath ="~/edp.master" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="cph_edp" Runat="Server">
+
+<script language="javascript" type="text/javascript"  >
+// <!CDATA[
+return window_onload()
+// ]]>
+</script>
+<script language="javascript" type="text/javascript">
+// <!CDATA[
+
+//modified by Harikrishnan Dec 01, 2011
+
+var cont_name=header.split('txt');
+
+function callreceiver(arg,context)
+{
+
+
+  switch (context)
+ {
+  case 1:
+     if(context==1)
+        {
+            var arr=arg.split("#")
+                       
+              if (arr[0]="1")
+              {            
+                if (arr[1]!="4!")
+                {  
+                    debugger;
+                         document.getElementById(cont_name[0]+"hdnDisplay").value=arr[1]
+                         showDetails()
+                }
+                if (arr[1]=="4!")
+                { alert("No Data Found ... select another One...");
+                return false;
+                }  
+                
+              }
+        } 
+  
+     break;
+         
+     case 2:
+        if(context==2)
+            {
+              var mesg=arg.split("#")
+                if (mesg[1]!="")
+                {
+                 alert(mesg[1])     
+                }
+               else
+               {
+                alert("No data Found..");
+                return false;
+               }
+            } 
+            
+            break;
+            
+    case 3:
+       if(context==3)
+        {  
+            var rowArr=arg.split("#")           
+            if (rowArr[1]!="")
+            {
+             document.getElementById(cont_name[0]+"txt_enam").value=rowArr[1];        
+            }
+           else
+            {
+            alert("Employ Does Not Exist..");
+            return false;
+            }
+        }  
+        break;
+        
+     case 4:
+     if(context==4)
+        {
+          var data1=arg.split("#");
+              if (data1[1]=="")
+                 {
+                   alert("No Data found .. ")
+                   return false;
+                 }
+               else
+                 {
+                   var  data2=data1[1]
+                    if (document.getElementById(cont_name[0]+"hdnData").value=="")
+                      {
+                        document.getElementById(cont_name[0]+"hdnData").value=data2+"!";
+                      }
+                    else
+                      {
+                        document.getElementById(cont_name[0]+"hdnData").value=document.getElementById(cont_name[0]+"hdnData").value+data2+"!";
+                      }
+                        dispTable()  
+                 }
+          }
+          
+          break;   
+          
+          case 6:  
+              if(context==6)
+              { var data1=arg.split("#");
+                alert(data1[1]);          
+              }   
+              window.open("../home.aspx","_self")             
+          break;
+ }
+                
+}
+
+
+function disphostels()
+ {
+
+    var flno = document.getElementById(cont_name[0]+"cmb_hostel").value;
+    if (flno==-1)
+    {
+        alert("Select HOSTEL Please.... ");
+        return false;
+    }
+    else
+    {
+     callserver("1#"+flno,1);
+    }
+ }   
+         
+////function btn_Verify_onclick() 
+////         {
+////             rowconf.style.display  ="none";
+////             var rem=document.getElementById(cont_name[0]+"txt_Remark").value;
+////             var flat=document.getElementById(cont_name[0]+"cmb_hostel").value;
+////             if(document.getElementById(cont_name[0]+"RadioButton1").checked==true)
+////               {
+////                 var hos_cond='GOOD';
+////                 var rem='GOOD'
+////               }
+////           
+////           if (document.getElementById(cont_name[0]+"RadioButton2").checked==true)
+////              {
+////               var hos_cond='BAD';
+////              }
+////               callserver("2#"+rem+"#"+flat+"#"+hos_cond,2);
+
+////         }
+
+function dispempname()
+ {
+
+   var empid=document.getElementById(cont_name[0]+"txt_Ecod").value;
+   if (empid=="")
+    {
+        alert("Enter Employ_code");
+        return false
+    }
+   else
+    {
+       callserver("3#"+empid,3);
+    }
+ }
+         
+function btn_Add_onclick() 
+{
+
+   var empid=document.getElementById(cont_name[0]+"txt_Ecod").value;
+   if (empid=="")
+   {
+       alert("ENTER EMPLOY CODE! Please.....");
+       return false;
+   }
+   else
+   {
+     callserver("4#"+empid,4);
+   }  
+}
+        
+         
+    
+             function showDetails()
+           {
+         
+                var tab=""
+                tab= "<table align=center width=75% border='1' style='border-collapse:collapse;width:100%;font-family: Times New Roman;'><tr style='color:white;background-color:#01B6FD;'><td style='width=10%;text-align=center ;font-size: 10pt;'><b>BRANCH&nbsp;NAME</td>"
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>BRANCH&nbsp;ID</td>";
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>EMP&nbsp;NAME</td>";
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>EMP&nbsp;CODE</td>"
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>HOSTEL</td>";
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>FIXED ASSET</td>";
+                  tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>VIEW ASSET</td>";
+                tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>DELETE&nbsp;FROM&nbsp;LIST</td>";
+                tab= tab+"<td style='width:10%;text-align=center ;font-size: 10pt;'><b>TICK&nbsp;TO&nbsp;REMOVE</b></td></tr>";
+                if (document.getElementById(cont_name[0]+"hdnDisplay").value!="!")
+                {
+                 var arr = document.getElementById(cont_name[0]+"hdnDisplay").value.split("!")
+                 arrCount=arr.length-1
+                 for (j=0;j<arrCount;j++)
+                    {
+                  
+                      var arr1=arr[j].split("~");
+                      var empcode = arr1[2]; 
+                      tab= tab+"<tr><td style='width=10%;text-align=left;font-size: 10pt;'>" + arr1[1] + "</td>";
+                      tab= tab+"<td style='width=10%;text-align=left;font-size: 10pt;'>" + arr1[0] + "</td>";
+                      tab= tab+"<td style='width=10%;text-align=left;font-size: 10pt;'>" + arr1[3] + "</td>";
+                      tab= tab+"<td style='width=10%;text-align=left;font-size: 10pt;'>" + arr1[2] + "</td>";
+                      tab= tab+"<td style='width=10%;text-align=left;font-size: 10pt;'>" + arr1[4] + "</td>";
+                      tab= tab+"<td style='width=10%;text-align=left;font-size: 10pt;'><input id='ys"+j+"' type='radio' name='YesNo"+j+"' value='1' onClick='Verfyfxed("+ j +","+ arr1[2] + ",1)' /><label for='ys"+j+"'>Yes</label><input id='No"+j+"' type='radio' name='YesNo"+j+"' value='0' onClick='Verfyfxed("+ j +","+ arr1[2] + ",0)'/><label for='No"+j+"'>No</label></td>";
+                     
+                      tab =tab+"<td style='width=10%;text-align=center;font-size: 10pt;'><a href=javascript:viewf("+empcode+")>View</a></td>";
+                      tab =tab+"<td style='width=10%;text-align=center;font-size: 10pt;'><a href=javascript:delf("+j+")>Delete</a></td>";
+                                      
+                      tab =tab+"<td style='width:10%;text-align=center;font-size: 10pt;'><small> <input id='Checkbox"+ j +"' name='list' type='checkbox' value = "+j+" onClick='output("+ j +","+ empcode + ")' ></small></td></tr>";
+                    }
+                      tab=tab+"</table>"
+                      document.getElementById(cont_name[0]+"pnl_disp").innerHTML=tab;
+                 }
+                 else
+                 {
+                    document.getElementById(cont_name[0]+"pnl_disp").innerHTML="";
+                 }                      
+             }
+             function Verfyfxed(hkm,h,p)
+            {
+            debugger;
+                        if(p==1)
+                        {
+                 
+                       window.open('work_or_not.aspx?empcode='+h+'&Choice=2');
+                       }
+                       
+                        var data = "";
+                        var k;
+                        
+                        var row = document.getElementById(cont_name[0]+"hdnDisplay").value;
+                        var rows = document.getElementById(cont_name[0]+"hdnDisplay").value.split("!");
+                        var len = Math.abs(rows.length);     
+                        for(k=0;k<=len;k++)
+                        {
+                        if(hkm==k)
+                        {
+                        
+                            data= data + rows[k]+ "~" + p + "!";
+                          
+                     
+                           
+                        }
+                        }
+                        document.getElementById(cont_name[0]+"hdnFxdVery").value += data;
+                        var dt =document.getElementById(cont_name[0]+"hdnFxdVery").value;
+                        
+                        
+            }
+            
+           
+            
+            function viewf(h)
+            {
+            
+            window.open('Rpt_hostelItem_individual.aspx?empcode='+h+'&Choice=2','_self');
+            }
+            function output(hkm,h)
+            {
+                              
+                if (document.getElementById("Checkbox"+ hkm +"").checked==true)                
+                {                               
+                    if (document.getElementById(cont_name[0]+"Hidd_removeCustList").value=="")
+                    {
+                      document.getElementById (cont_name[0]+"Hidd_removeCustList").value=h+"!";
+                    }
+                    else
+                    {
+                      document.getElementById (cont_name[0]+"Hidd_removeCustList").value=document.getElementById(cont_name[0]+"Hidd_removeCustList").value+h+"!";
+                    }                    
+                }
+                else
+                {
+                 var a=hkm
+                        var data = "";
+                        var j=a-1,k
+                        var rows = document.getElementById(cont_name[0]+"Hidd_removeCustList").value.split("!");
+                        var len = Math.abs(rows.length);     
+                        for(k=0;k<=j;k++)
+                        {
+                        if(data=="")
+                        {
+                        data=rows[k]
+                        }
+                        else
+                        {
+                        data=data+"!"+ rows[k]
+                        }
+                        }
+                        for(k=j+2;k<len;k++)
+                        {
+                        if(data=="")
+                        {
+                        data=rows[k]
+                        }
+                        else
+                        {
+                        data=data+"!"+rows[k]
+                        }
+                        }
+                        document.getElementById(cont_name[0]+"Hidd_removeCustList").value = data;                                 
+
+                }                                                              
+            }
+            function addfxed(hkm,h,p)
+            {
+            debugger;
+                        var data = "";
+                        var k;
+                        var rows = document.getElementById(cont_name[0]+"hdnData").value.split("!");
+                        var len = Math.abs(rows.length);     
+                        for(k=0;k<=len;k++)
+                        {
+                        if(hkm==k)
+                        {
+                        data= data + rows[k]+ "~" + p + "!";
+                        }
+                        }
+                        document.getElementById(cont_name[0]+"hdnFxd").value += data;
+            }
+     function delf(m)
+            {
+                var j=m-1,k
+                var new_tran=""
+                var new_tran1=""
+                if( document.getElementById(cont_name[0]+"hdnDisplay").value!="")
+                {
+                        var arr=document.getElementById(cont_name[0]+"hdnDisplay").value.split("!")
+                        for(k=0;k<arr.length-1;k++)
+                        {
+                            if (Math.abs(k) != Math.abs(m) )
+                               {
+                                    if (new_tran != "") new_tran = new_tran+"!";
+                                    new_tran = new_tran + arr[k];
+                               }
+                         }
+                            new_tran = new_tran +"!"
+                            document.getElementById(cont_name[0]+"hdnDisplay").value=new_tran                            
+                            showDetails();
+                  }
+              }    
+
+function btn_Exit_onclick() 
+{
+   window.open("../home.aspx","_self")
+}
+
+
+function btn_Insert_onclick() 
+{
+  rowecode.style.display = "inline";
+  rowpanel.style.display = "inline";
+  rowadd.style.display   = "inline";
+  rowconf.style.display  = "inline"
+}
+
+function window_onload() 
+{
+  rowecode.style.display = "none";
+  rowpanel.style.display = "none";
+  rowadd.style.display   = "none";
+  rowremark.style.display="none";
+  rowconf.style.display  ="inline";
+  
+}
+
+function remremark()
+{
+  if (document.getElementById(cont_name[0]+"RadioButton1").checked==true)
+     {   
+        rowremark.style.display="none";
+     }   
+}
+
+function addremark()
+{
+  if (document.getElementById(cont_name[0]+"RadioButton2").checked==true)
+     {   
+        rowremark.style.display="inline";
+     }   
+}
+
+  
+  
+  function dispTable()
+            { debugger;
+            var data = document.getElementById(cont_name[0]+"hdnData").value
+            if (data=="")
+                   {
+                    document.getElementById(cont_name[0]+"Panel1").innerHTML    = "";
+                    document.getElementById(cont_name[0]+"txt_Ecod").value      = ""; 
+                    return;
+                   }
+                    var row,col;
+                    var row_bg = 0;
+                    var tab="";
+                    tab +="<table border='1' style='width:100%; font-family:Times New Roman; border-collapse:collapse;' >";
+                    tab +="<tr style='background-color:Wheat ;height:20'>";"<table><tr><td></td><td></td></tr></table>"
+                    tab +="<td style='width=10%;text-align=center;font-size: 10pt;'><small><B>EMP&nbsp;CODE</B></small></td>";
+                    tab +="<td style='width=10%;text-align=left;font-size: 10pt;'><small><B>EMP&nbsp;NAME</B></small></td>";
+                    tab +="<td style='width=10%;text-align=center;font-size: 10pt;'><small><B>BRANCH&nbsp;ID</B></small></td>";
+                    tab +="<td style='width=10%;text-align=left;font-size: 10pt;'><small><B>BRANCH&nbsp;NAME</B></small></td>";
+                    tab= tab+"<td style='width=10%;text-align=center ;font-size: 10pt;'><b>FIXED ASSET</td>";
+                    tab +="<td style='width:10%;text-align=center ;font-size: 10pt;'><small><B>DELETE</B></small></td>";                   
+                    tab +="</tr>";
+                    row = document.getElementById(cont_name[0]+"hdnData").value.split("!") 
+
+        for(n = 0; n < row.length-1; n++)
+        { 
+            col=row[n].split("~");
+            if(row_bg==0)
+            {
+                row_bg=1;
+                tab += "<tr style='background-color:OldLace'>";
+            }     
+            else
+            {
+                row_bg=0;
+                tab += "<tr style='background-color:Wheat'>";
+            }
+            tab +="<td style='width:10%;text-align=left;font-size: 10pt;'><small>"+ col[0] +"</small></td>";
+            tab +="<td style='width:10%;text-align=left;font-size: 10pt;'><small>"+ col[1] +"</small></td>";
+            tab +="<td style='width:10%;text-align=left;font-size: 10pt;'><small>"+ col[2] +"</small></td>";
+            tab +="<td style='width:10%;text-align=center;font-size: 10pt;'><small>"+ col[3] +"</small></td>";
+            tab +="<td style='width=10%;text-align=left;font-size: 10pt;'><input id='yes"+n+"' type='radio' name='YeN"+n+"' value='1' onClick='addfxed("+ n +","+ col[2] + ",1)' /><label for='yes"+n+"'>Yes</label><input id='No1"+n+"' type='radio' name='YeN"+n+"' value='0' onClick='addfxed("+ n +","+col[2]+",0)' /><label for='No1"+n+"'>No</label></td>";
+            tab +="<td style='width:10%'><small><a href=javascript:delete_row(" + (n) + ")>Del</a></small></td>";           
+            tab +="</tr>";
+            
+        }
+         if(row_bg==0)
+            {
+             tab += "<tr style='background-color:OldLace'>";
+            }     
+            else
+            {
+             tab += "<tr style='background-color:Wheat'>";
+            }
+            tab +="</tr>";
+            tab +="</table>";
+            document.getElementById("rowpanel").style.display = "inline";
+            document.getElementById(cont_name[0]+"Panel1").innerHTML = tab; 
+            document.getElementById(cont_name[0]+"txt_Ecod").value   = "";    
+           // document.getElementById ("panel_Id_row").innerHTML="";      
+}   
+  
+  
+function delete_row(a)
+{
+   var data = "";
+   var j=a-1,k
+   var rows = document.getElementById(cont_name[0]+"hdnData").value.split("!");
+   var len = Math.abs(rows.length);     
+   for(k=0;k<=j;k++)
+   {
+     if(data=="")
+     {
+        data=rows[k]
+     }
+     else
+     {
+        data=data+"!"+ rows[k]
+     }
+   }
+   for(k=j+2;k<len;k++)
+   {
+     if(data=="")
+     {
+        data=rows[k]
+     }
+     else
+     {
+        data=data+"!"+rows[k]
+     }
+   }
+   document.getElementById(cont_name[0]+"hdnData").value = data;    
+   dispTable();
+} 
+
+
+function bttnRemove_onclick() 
+{
+   var removelist=document.getElementById(cont_name[0]+"Hidd_removeCustList").value;
+   var cmbhostel= document.getElementById(cont_name[0]+"cmb_hostel").value;
+  
+   if (cmbhostel=="-1")
+   {
+       alert("Select Hostel From List!! ");
+       return false;
+   }
+   
+   if (removelist=="")
+   {
+       alert("Select Employee To Remove!! ");
+       return false;
+   }
+   if (removelist!="")
+   {
+       callserver("6#"+removelist+"#"+cmbhostel ,6);
+   }  
+
+}
+function btn_VerifyOnClick()
+{ 
+   var cmbhostel= document.getElementById(cont_name[0]+"cmb_hostel").value; 
+   var RemarkHostel= document.getElementById(cont_name[0]+"txt_Remark").value;  
+   var RemarkStayorNot=  document.getElementById(cont_name[0]+"txt_stay_or_not").value; 
+   var fxdvery = document.getElementById(cont_name[0]+"hdnFxdVery").value;
+   var verfydtl = document.getElementById(cont_name[0]+"hdnDisplay").value;
+      
+   if (cmbhostel=="-1")
+   { alert("Select hostel from list!! "); return false;
+   }
+   if(verfydtl != "")
+   {
+      if (fxdvery=="")
+       { 
+        alert("Select Fixed Asset Condition for already existing employee!! "); return false;
+       } 
+   }
+   if(RemarkStayorNot=="")
+   {alert("Hostel employees count need to specify!");
+    return false;
+   }
+   if(RemarkHostel=="")
+   {alert("Enter Remarks!!!");
+    return false;
+   }    
+   
+}
+function btn_ConfirmOnClick()
+{ 
+  var cmbhostel= document.getElementById(cont_name[0]+"cmb_hostel").value;  
+  var hdn_add_1Emp= document.getElementById(cont_name[0]+"hdnData").value;
+  var fxdvery = document.getElementById(cont_name[0]+"hdnFxdVery").value;
+  var fxd = document.getElementById(cont_name[0]+"hdnFxd").value;
+  var verfydtl = document.getElementById(cont_name[0]+"hdnDisplay").value;
+  
+  var data='';
+   if (cmbhostel=="-1")
+   { alert("Select hostel from list!! "); return false;
+   }
+   if (fxd=="")
+   { alert("Select Fixed Asset Condition!! "); return false;
+   }  
+   if(verfydtl != "")
+   {
+      if (fxdvery=="")
+       { 
+        alert("Select Fixed Asset Condition for already existing employee!! "); return false;
+       } 
+   }
+    
+   
+    
+   if (hdn_add_1Emp=="")
+   {
+   alert("No Employees found to insert,\n Add employess to list by INSERT-->>ADD TO LIST-->>");
+   return false;
+   }
+}
+// ]]>
+</script>
+
+    <div style="text-align: center">
+        <div style="text-align: center">
+            <asp:ScriptManager ID="ScriptManager1" runat="server">
+            </asp:ScriptManager>
+            <asp:HiddenField ID="hdnDisplay" runat="server" />
+            <asp:HiddenField ID="hdnData" runat="server" />
+            <asp:HiddenField ID="hdnFxd" runat="server" />
+            <asp:HiddenField ID="hdnFxdVery" runat="server" />
+
+
+            <table border="2" style="width: 80%; height:100%;color: black; font-family: 'Times New Roman'; font-size: 10pt;">
+                <tr style="width: 100%; " >
+                    <td colspan="4" style="font-family: Verdana">
+                        <strong>
+                        &nbsp;HOSTEL&nbsp;VERIFICATION</strong></td>
+                </tr>
+                <tr style="width: 100%; "> 
+                    <td colspan="2" style="font-family: Verdana; text-align: right">
+                        Select&nbsp;Hostel</td>
+                    <td colspan="2" style="font-family: Verdana; text-align: left">
+                        <asp:DropDownList ID="cmb_hostel"  runat="server" Font-Names="Times New Roman" ForeColor="Black"
+                            Width="384px">
+                        </asp:DropDownList></td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="2" style="font-family: Verdana; text-align: right">
+                    </td>
+                    <td colspan="2" style="font-family: Verdana; text-align: left">
+                        <%--<input type="button" name="CheckAll" value="Check All" onClick="checkAll(document.myform.list)">
+                    <input type="button" name="UnCheckAll" value="Uncheck All" onClick="uncheckAll(document.myform.list)">--%>
+                    </td>
+                </tr>
+                <tr style="width: 100%; ">
+                    <td colspan="4" style="font-family: Verdana">
+                        <asp:Panel ID="pnl_disp" runat="server" Width="100%">
+                        </asp:Panel>
+                    </td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: center">
+                        <input id="bttnRemove" style="color: black; font-family: 'Times New Roman'; width: 230px;" type="button"
+                            value="REMOVE EMPLOYEE  FROM HOSTEL" onclick="return bttnRemove_onclick()"  /></td>
+                </tr>
+                <tr style="width: 100%; ">
+                    <td colspan="2" style="font-family: Verdana; text-align: right;">
+                        Hostel&nbsp;Condition</td>
+                    <td colspan="2" style="font-family: Verdana; text-align: left;">
+                        <asp:RadioButton ID="RadioButton1"  runat="server" onclick="remremark()" Text="GOOD" Width="72px" GroupName="a" Checked="True" /><asp:RadioButton ID="RadioButton2" runat="server" onclick="addremark()" Text="BAD" GroupName="a" /></td>
+                </tr>
+                <tr style="width: 100%; display:none " id="rowremark" >
+                    <td colspan="2" style="font-family: Verdana; text-align: right;">
+                        Enter&nbsp;Remark specify empoyees
+                        count
+                    </td>
+                    <td colspan="2" style="font-family: Verdana; text-align: left;">
+                        <asp:TextBox ID="txt_Remark" runat="server" Font-Names="Times New Roman" ForeColor="Black"
+                            Width="376px" MaxLength="75"></asp:TextBox></td>
+                </tr>
+                <tr style="width: 100%;display:none " id="rowecode">
+                    <td style="font-family: Verdana;">
+                        Emp&nbsp;Code</td>
+                    <td style="font-family: Verdana;">
+                        <asp:TextBox ID="txt_Ecod" runat="server" onblur="dispempname()" Font-Names="Times New Roman" ForeColor="Black" Width="176px" MaxLength="7"></asp:TextBox></td>
+                    <td style="font-family: Verdana;">
+                        Emp&nbsp;Name</td>
+                    <td style="font-family: Verdana;">
+                        <asp:TextBox ID="txt_enam" runat="server" Font-Names="Times New Roman" ForeColor="Black" MaxLength="75" Width="210px"></asp:TextBox></td>
+                </tr>
+                <tr id="rowpanel" style="width: 100%; display:none">
+                    <td colspan="4" style="font-family: Verdana">
+                        <asp:Panel ID="Panel1" runat="server" Width="100%">
+                        </asp:Panel>
+                    </td>
+                </tr>
+                <tr id="rowadd" style="width: 100%; display:none">
+                    <td colspan="4" style="font-family: Verdana; text-align: center;">
+                        <input id="btn_Add" style="width: 112px; color: black; font-family: 'Times New Roman'"
+                            type="button" value="ADD" onclick="return btn_Add_onclick()" /></td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: center">
+                    </td>
+                </tr>
+                <tr style="width: 100%;">
+                       <td colspan="4" style="font-family: Verdana; text-align: center;">
+                        <input id="btn_Insert" style="color: black; font-family: 'Times New Roman'" type="button"
+                            value="INSERT EMPLOY" onclick="return btn_Insert_onclick()" />
+                        <asp:Button ID="btn_Verify" runat="server"
+                            Font-Names="Times New Roman" ForeColor="Black" Text="VERIFY EMPLOY" Width="162px" />
+                        <input id="btn_Exit" style="color: black; font-family: 'Times New Roman'; width: 118px;" type="button"
+                            value="EXIT" onclick="return btn_Exit_onclick()" /></td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: left">
+                        Whether employee staying in hostel?<asp:RadioButton ID="rd_yes" runat="server" GroupName="rdselect"
+                            Text="YES" Width="82px" /><asp:RadioButton ID="rd_no" runat="server" GroupName="rdselect"
+                                Text="NO" Width="75px" /></td>
+                </tr>
+                <tr style="width: 100%">
+                    <td >
+                        <strong>Upload Document:</strong></td>
+                    <td>   
+                        <asp:FileUpload ID="FileUpload1" runat="server" Style="border-right: #0099ff 1px solid;
+                            border-top: #0099ff 1px solid; border-left: #0099ff 1px solid; border-bottom: #0099ff 1px solid;
+                            background-color: #ffffff" Width="454px" /></td>
+                    <td>  </td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: left">
+                        (please specify employee's count in column ):<asp:TextBox ID="txt_stay_or_not" runat="server"
+                            Font-Names="Times New Roman" ForeColor="Black" Height="17px" MaxLength="75" Width="238px"></asp:TextBox></td>
+                </tr>
+                <tr style="width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: left; height: 68px;">
+                        Declaration<br />
+                        <br />
+                        Above Said matter is true of my Knowledge.
+                        <br />
+                    </td>
+                </tr>
+                <tr style="display: none; width: 100%">
+                    <td colspan="4" style="font-family: Verdana; text-align: left">
+                        Note:<br />
+                        1.Enter Correct Details.<br />
+                        2.Enter Data Carefully.<br />
+                        3.You are responsible for rent related issues of above said hostel.</td>
+                </tr>
+                
+                <tr id="rowconf" style="width: 100%; display:none">
+                    <td colspan="4" style="font-family: Verdana">
+                        <asp:Button ID="btn_Confirm" runat="server" Font-Names="Times New Roman" ForeColor="Black"
+                            Text="CONFIRM" Width="113px" />
+                        </td>
+                </tr>
+            </table>
+            <asp:HiddenField ID="hd_sts" runat="server" />
+            <cc1:ListSearchExtender ID="ListSearchExtender1" runat="server" TargetControlID="cmb_hostel">
+            </cc1:ListSearchExtender>
+            <asp:HiddenField ID="Hidd_removeCustList" runat="server" />
+        </div>
+    </div>
+</asp:Content>
+
