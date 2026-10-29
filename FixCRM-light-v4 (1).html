@@ -265,12 +265,6 @@
                 : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
         }
 
-        function postApiUrlWithFile() {
-             return window.location.hostname === "localhost"
-                ? "/Others/postAPIData"
-                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
-        }
-
         function fetchHostels() {
             var reqData = "HOSTEL_VERIFY_GET_HOSTELS^" + usr_id + "~" + firm_id + "~" + branch_id + "^1";
             $.ajax({
@@ -407,7 +401,7 @@
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
-                data: { datas: reqData },
+                data: { datas2: reqData },
                 success: function (res) {
                     var data = typeof res === "string" ? JSON.parse(res) : res;
                     if (data && data.length > 0) {
@@ -596,6 +590,23 @@
             });
         }
 
+        // Dedicated helper function to upload base64 file via AJAX
+        function uploadDocumentFile(base64String, cmbhostel, callback) {
+            // Using '~' delimiter because the backend PLSQL uses splitstr(p_pageval, '~')
+            var uploadReqData = "HOSTEL_VERIFY_UPLOAD_DOC^" + cmbhostel + "~" + usr_id + "~" + base64String + "^1";
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: uploadReqData },
+                success: function (res) {
+                    if (callback) callback(true);
+                },
+                error: function () {
+                    if (callback) callback(false);
+                }
+            });
+        }
+
         function btn_VerifyOnClick() {
             var cmbhostel = $('#cmb_hostel').val();
             var RemarkHostel = $('#txt_Remark').val();
@@ -633,33 +644,47 @@
             var stay_orNot = $('#rd_yes').is(':checked') ? "1" : "2";
             var combinedRemark = RemarkHostel + "®" + stay_orNot + "®" + RemarkStayorNot;
 
+            // Note: Ensure your backend PL/SQL flag 'HOSTEL_VERIFY_EXECUTE_VERIFY' expects splitting by '$'
             var reqData = "HOSTEL_VERIFY_EXECUTE_VERIFY^" + cmbhostel + "$" + fxdvery + "$" + usr_id + "$" + firm_id + "$" + hos_cong + "$" + hos_conb + "$" + combinedRemark + "^1";
-
-            var formData = new FormData();
-            formData.append("datas", reqData);
-            formData.append("file", fileInput.files[0]);
 
             Swal.fire({ title: "Verifying...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-            $.ajax({
-               type: "POST",
-                url: postApiUrl(),
-                data: { datas: reqData },
-                success: function (res) {
-                    var data = typeof res === "string" ? JSON.parse(res) : res;
-                    alert("sssssssss"+data);
-                    if (data && data.length > 0) {
-                        var status = data[0].STATUS || data[0].status;
-                        var msg = data[0].RES || data[0].res;
-                        Swal.fire("Result", msg, "info").then(() => resetForm());
-                    } else {
-                        Swal.fire("Error", "Failed to verify employee.", "error");
+            // 1. Read File as Base64 from the frontend
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var fullBase64 = e.target.result;
+                var base64Data = fullBase64.split(',')[1]; // Remove data URL prefix
+
+                // 2. Execute Main Verification API
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var status = data[0].STATUS || data[0].status;
+                            var msg = data[0].RES || data[0].res;
+                            
+                            // 3. Upload File API passing Base64
+                            uploadDocumentFile(base64Data, cmbhostel, function(success) {
+                                if(success) {
+                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                } else {
+                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                }
+                            });
+                        } else {
+                            Swal.fire("Error", "Failed to verify employee.", "error");
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Server connection failed.", "error");
                     }
-                },
-                error: function () {
-                    Swal.fire("Error", "Server connection failed.", "error");
-                }
-            });
+                });
+            };
+            reader.readAsDataURL(file);
         }
 
         function btn_ConfirmOnClick() {
@@ -697,32 +722,47 @@
             var hos_cong = $('#rbGood').is(':checked') ? "1" : "0";
             var hos_conb = $('#rbBad').is(':checked') ? "1" : "0";
 
+            // Note: Ensure your backend PL/SQL flag 'HOSTEL_VERIFY_EXECUTE_CONFIRM' expects splitting by '$'
             var reqData = "HOSTEL_VERIFY_EXECUTE_CONFIRM^" + fxd + "$" + cmbhostel + "$" + usr_id + "$" + firm_id + "$" + hos_cong + "$" + hos_conb + "$" + RemarkHostel + "$" + fxdvery + "^1";
-
-            var formData = new FormData();
-            formData.append("datas", reqData);
-            formData.append("file", fileInput.files[0]);
 
             Swal.fire({ title: "Confirming...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-            $.ajax({
-              type: "POST",
-                url: postApiUrl(),
-                data: { datas: reqData },
-                success: function (res) {
-                    var data = typeof res === "string" ? JSON.parse(res) : res;
-                    if (data && data.length > 0) {
-                        var status = data[0].STATUS || data[0].status;
-                        var msg = data[0].RES || data[0].res;
-                        Swal.fire("Result", msg, "info").then(() => resetForm());
-                    } else {
-                        Swal.fire("Error", "Failed to confirm employee.", "error");
+            // 1. Read File as Base64 from the frontend
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var fullBase64 = e.target.result;
+                var base64Data = fullBase64.split(',')[1]; // Remove data URL prefix
+
+                // 2. Execute Main Confirmation API
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var status = data[0].STATUS || data[0].status;
+                            var msg = data[0].RES || data[0].res;
+                            
+                            // 3. Upload File API passing Base64
+                            uploadDocumentFile(base64Data, cmbhostel, function(success) {
+                                if (success) {
+                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                } else {
+                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                }
+                            });
+                        } else {
+                            Swal.fire("Error", "Failed to confirm employee.", "error");
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Server connection failed.", "error");
                     }
-                },
-                error: function () {
-                    Swal.fire("Error", "Server connection failed.", "error");
-                }
-            });
+                });
+            };
+            reader.readAsDataURL(file);
         }
 
         function resetForm() {
@@ -736,6 +776,10 @@
             $('#FileUpload1').val("");
             $('#pnl_disp').empty();
             $('#Panel1').empty();
+            
+            $('input[name="hostelCond"][value="GOOD"]').prop("checked", true);
+            $('input[name="stayCond"][value="YES"]').prop("checked", true);
+            toggleRemark();
         }
     </script>
 </body>
