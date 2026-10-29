@@ -381,6 +381,7 @@
                 var arr1 = arr[j].split("~");
                 var empcode = arr1[2];
 
+                // Added unique prefixes "exist_" to IDs to prevent conflicts with the insert table
                 tab += `<tr>
                             <td class='text-start'>${arr1[1]}</td>
                             <td class='text-center'>${arr1[0]}</td>
@@ -388,12 +389,12 @@
                             <td class='text-center'>${arr1[2]}</td>
                             <td class='text-start'>${arr1[4]}</td>
                             <td class='text-center' style='white-space:nowrap;'>
-                                <input id='ys${j}' type='radio' name='YesNo${j}' value='1' onClick='Verfyfxed(${j}, ${arr1[2]}, 1)' /> <label for='ys${j}' class='me-2'>Yes</label>
-                                <input id='No${j}' type='radio' name='YesNo${j}' value='0' onClick='Verfyfxed(${j}, ${arr1[2]}, 0)' /> <label for='No${j}'>No</label>
+                                <input id='exist_ys_${j}' type='radio' name='ExistYesNo_${j}' value='1' onClick='Verfyfxed(${j}, ${arr1[2]}, 1)' /> <label for='exist_ys_${j}' class='me-2'>Yes</label>
+                                <input id='exist_no_${j}' type='radio' name='ExistYesNo_${j}' value='0' onClick='Verfyfxed(${j}, ${arr1[2]}, 0)' /> <label for='exist_no_${j}'>No</label>
                             </td>
                             <td class='text-center'><a href="javascript:void(0)" onclick="viewf(${empcode})" class="text-primary fw-bold text-decoration-none">View</a></td>
                             <td class='text-center'><a href="javascript:void(0)" onclick="delf(${j})" class="text-danger fw-bold text-decoration-none">Delete</a></td>
-                            <td class='text-center'><input id='Checkbox${j}' type='checkbox' class='form-check-input' onClick='output(${j}, ${empcode})' /></td>
+                            <td class='text-center'><input id='chk_remove_${j}' type='checkbox' class='form-check-input' onClick='output(${j}, ${empcode})' /></td>
                         </tr>`;
             }
             tab += `</tbody></table>`;
@@ -408,7 +409,7 @@
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
-                data: { datas: reqData },
+                data: { datas2: reqData },
                 success: function (res) {
                     var data = typeof res === "string" ? JSON.parse(res) : res;
                     if (data && data.length > 0) {
@@ -479,14 +480,16 @@
 
             for (var n = 0; n < row.length - 1; n++) {
                 var col = row[n].split("~");
+                
+                // Added unique prefixes "new_" to IDs to prevent conflicts with the existing table
                 tab += `<tr>
                             <td class='text-center'>${col[0]}</td>
                             <td class='text-start'>${col[1]}</td>
                             <td class='text-center'>${col[2]}</td>
                             <td class='text-start'>${col[3]}</td>
                             <td class='text-center' style='white-space:nowrap;'>
-                                <input id='yes${n}' type='radio' name='YeN${n}' value='1' onClick='addfxed(${n}, ${col[2]}, 1)' /> <label for='yes${n}' class='me-2'>Yes</label>
-                                <input id='No1${n}' type='radio' name='YeN${n}' value='0' onClick='addfxed(${n}, ${col[2]}, 0)' /> <label for='No1${n}'>No</label>
+                                <input id='new_ys_${n}' type='radio' name='NewYeN_${n}' value='1' onClick='addfxed(${n}, ${col[2]}, 1)' /> <label for='new_ys_${n}' class='me-2'>Yes</label>
+                                <input id='new_no_${n}' type='radio' name='NewYeN_${n}' value='0' onClick='addfxed(${n}, ${col[2]}, 0)' /> <label for='new_no_${n}'>No</label>
                             </td>
                             <td class='text-center'><a href="javascript:void(0)" onclick="delete_row(${n})" class="text-danger fw-bold text-decoration-none">Del</a></td>
                         </tr>`;
@@ -524,7 +527,8 @@
 
         function output(hkm, h) {
             var currentList = $('#Hidd_removeCustList').val();
-            if ($('#Checkbox' + hkm).is(':checked')) {
+            // Referencing the newly named unique checkbox ID
+            if ($('#chk_remove_' + hkm).is(':checked')) {
                 $('#Hidd_removeCustList').val(currentList + h + "!");
             } else {
                 var rows = currentList.split("!");
@@ -599,8 +603,6 @@
 
         function uploadDocumentFile(base64String, cmbhostel, callback) {
             var pquery = `insert into DMS.TBL_HOSTEL_AH_DOCUPLOAD (FULL_DOC, HOSTEL_ID, VERIFIED_BY, VERIFIED_DT) values (:DOCUMENT, ${cmbhostel}, ${usr_id}, sysdate)`;
-
-   
             var uploadReqData = pquery + "^" + base64String;
 
             $.ajax({
@@ -617,7 +619,6 @@
                 }
             });
         }
-
 
         function btn_VerifyOnClick() {
             var cmbhostel = $('#cmb_hostel').val();
@@ -661,12 +662,12 @@
 
             Swal.fire({ title: "Verifying...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-          
             var file = fileInput.files[0];
             var reader = new FileReader();
             reader.onload = function (e) {
                 var fullBase64 = e.target.result;
                 var base64Data = fullBase64.split(',')[1]; 
+                
                 $.ajax({
                     type: "POST",
                     url: postApiUrl(),
@@ -677,17 +678,17 @@
                             var status = data[0].STATUS || data[0].status;
                             var msg = data[0].RES || data[0].res;
 
-
-                        if (status == '1') {
-                            uploadDocumentFile(base64Data, cmbhostel, function(response) {
-                                 if (response == '1') {
-                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
-                                } else {
-                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
-                                }
-                            });
-                        }
-
+                            if (status == '1' || status == 1 || status == '0' || status == 0) {
+                                uploadDocumentFile(base64Data, cmbhostel, function(response) {
+                                     if (response == '1' || response === true) {
+                                        Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                    } else {
+                                        Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                    }
+                                });
+                            } else {
+                                Swal.fire("Result", msg, "info");
+                            }
                         } else {
                             Swal.fire("Error", "Failed to verify employee.", "error");
                         }
@@ -735,19 +736,16 @@
             var hos_cong = $('#rbGood').is(':checked') ? "1" : "0";
             var hos_conb = $('#rbBad').is(':checked') ? "1" : "0";
 
-            // Note: Ensure your backend PL/SQL flag 'HOSTEL_VERIFY_EXECUTE_CONFIRM' expects splitting by '$'
             var reqData = "HOSTEL_VERIFY_EXECUTE_CONFIRM^" + fxd + "$" + cmbhostel + "$" + usr_id + "$" + firm_id + "$" + hos_cong + "$" + hos_conb + "$" + RemarkHostel + "$" + fxdvery + "^1";
 
             Swal.fire({ title: "Confirming...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-            // 1. Read File as Base64 from the frontend
             var file = fileInput.files[0];
             var reader = new FileReader();
             reader.onload = function (e) {
                 var fullBase64 = e.target.result;
-                var base64Data = fullBase64.split(',')[1]; // Remove data URL prefix
+                var base64Data = fullBase64.split(',')[1]; 
 
-                // 2. Execute Main Confirmation API
                 $.ajax({
                     type: "POST",
                     url: postApiUrl(),
@@ -758,14 +756,17 @@
                             var status = data[0].STATUS || data[0].status;
                             var msg = data[0].RES || data[0].res;
 
-                            // 3. Upload File API passing Base64 to Gl_missingupd
-                            uploadDocumentFile(base64Data, cmbhostel, function(success) {
-                                if (success) {
-                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
-                                } else {
-                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
-                                }
-                            });
+                            if (status == '1' || status == 1 || status == '0' || status == 0) {
+                                uploadDocumentFile(base64Data, cmbhostel, function(response) {
+                                    if (response == '1' || response === true) {
+                                        Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                    } else {
+                                        Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                    }
+                                });
+                            } else {
+                                Swal.fire("Result", msg, "info");
+                            }
                         } else {
                             Swal.fire("Error", "Failed to confirm employee.", "error");
                         }
@@ -797,4 +798,3 @@
     </script>
 </body>
 </html>
-
