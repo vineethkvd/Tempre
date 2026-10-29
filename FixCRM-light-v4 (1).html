@@ -1,1 +1,67 @@
+ ELSIF p_flag = 'HOSTEL_VERIFY_EXECUTE_VERIFY' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = FLATNO
+        -- v_spliter_a(2) = DATASTR (hdnFxdVery.Value)
+        -- v_spliter_a(3) = USERID
+        -- v_spliter_a(4) = FIRMID
+        -- v_spliter_a(5) = HOST_COND_G
+        -- v_spliter_a(6) = HOST_COND_B
+        -- v_spliter_a(7) = REMA (Combined string with ® separators)
+        
+        PROC_HOSTEL_AHVERIFICATION(
+            v_spliter_a(1), 
+            v_spliter_a(2), 
+            err_stat, 
+            errorMsg, 
+            v_spliter_a(3), 
+            TO_NUMBER(v_spliter_a(4)), 
+            v_spliter_a(5), 
+            v_spliter_a(6), 
+            v_spliter_a(7)
+        );
+        
+        OPEN p_as_outresult FOR 
+            SELECT errorMsg AS res, err_stat AS status FROM dual;
 
+
+correct flag based on 
+
+create or replace procedure mana0809.PROC_HOSTEL_AHVERIFICATION(FLATNO       in number,
+                                                       DATASTR      in varchar,
+                                                       ERR_STAT     out number,
+                                                       ERR_MSG      out varchar2,
+                                                       USERID       in varchar2,
+                                                       FIRMID       in number,
+                                                       HOST_COND_G  in varchar2,
+                                                       HOST_COND_B  in varchar2,
+                                                       REMA         in varchar2) is
+                                                       
+   cnt              number;
+   BG               VARCHAR2(5);
+   ROWARR           ARRAY;
+   COLARR           ARRAY;
+begin
+  IF HOST_COND_B=1 THEN
+              BG:='BAD';
+    END IF;
+
+    IF HOST_COND_G=1 THEN
+              BG:='GOOD';
+    END IF;
+  if DATASTR is not null then
+    ROWARR := splitstr(DATASTR,'!');
+    CNT :=ROWARR.COUNT;
+    FOR i in 1 .. CNT-1
+    LOOP
+        COLARR := splitstr(ROWARR(i),'~');
+        Update tbl_rent_hostel r set r.status=7 , r.option_id=3,r.VERIFY_DT=sysdate,r.HOSTEL_REM=REMA,r.VERIFY_EMPLOY=USERID,r.hostel_condition= BG, r.asset_byah =COLARR(7) where r.FLAT_NO=FLATNO and r.status in(1,5,7) and r.emp_code = COLARR(3) and r.check_out_date is null;
+       
+        ERR_STAT:=0;
+        ERR_MSG:='SuccessFully Verified';
+    END LOOP; 
+  else
+           ERR_STAT:=1;
+           ERR_MSG:='NO DATA';             
+    end if; 
+end PROC_HOSTEL_AHVERIFICATION;
+/
