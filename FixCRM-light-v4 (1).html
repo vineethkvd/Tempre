@@ -1,4 +1,6 @@
-
+Based on your screenshot "b48659fd-db06-44d3-a047-6efeac074bc5", you have set up the HOSTEL_VERIFY_UPLOAD_DOC flag to directly accept v_spliter_a(3) into the FULL_DOC column.
+(Note: If FULL_DOC is a BLOB column, inserting the base64 string directly as shown in the screenshot will result in an Oracle type conversion error. You will need to wrap it in utl_encode.base64_decode(utl_raw.cast_to_raw(v_spliter_a(3))) inside your procedure).
+Here is the complete view. The JavaScript FileReader API reads the uploaded file, extracts the raw Base64 string, and passes it through your standard string-delimited postAPIData endpoint.
 @{
     ViewData["Title"] = "amahverification";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -350,4 +352,437 @@
         }
 
         function showDetails() {
-            var hdnVal = js('#hdnDisplay').
+            var hdnVal = js('#hdnDisplay').val();
+            if (!hdnVal || hdnVal === "!") {
+                js('#pnl_disp').empty();
+                return;
+            }
+
+            var arr = hdnVal.split("!");
+            var tab = `<table class='inner-data-table'>
+                        <thead>
+                            <tr>
+                                <th>BRANCH NAME</th>
+                                <th>BRANCH ID</th>
+                                <th>EMP NAME</th>
+                                <th>EMP CODE</th>
+                                <th>HOSTEL</th>
+                                <th>FIXED ASSET</th>
+                                <th>VIEW ASSET</th>
+                                <th>DELETE FROM LIST</th>
+                                <th>TICK TO REMOVE</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            for (var j = 0; j < arr.length - 1; j++) {
+                var arr1 = arr[j].split("~");
+                var empcode = arr1[2];
+
+                tab += `<tr>
+                            <td class='text-start'>${arr1[1]}</td>
+                            <td class='text-center'>${arr1[0]}</td>
+                            <td class='text-start'>${arr1[3]}</td>
+                            <td class='text-center'>${arr1[2]}</td>
+                            <td class='text-start'>${arr1[4]}</td>
+                            <td class='text-center' style='white-space:nowrap;'>
+                                <input id='ys${j}' type='radio' name='YesNo${j}' value='1' onClick='Verfyfxed(${j}, ${arr1[2]}, 1)' /> <label for='ys${j}' class='me-2'>Yes</label>
+                                <input id='No${j}' type='radio' name='YesNo${j}' value='0' onClick='Verfyfxed(${j}, ${arr1[2]}, 0)' /> <label for='No${j}'>No</label>
+                            </td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="viewf(${empcode})" class="text-primary fw-bold text-decoration-none">View</a></td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="delf(${j})" class="text-danger fw-bold text-decoration-none">Delete</a></td>
+                            <td class='text-center'><input id='Checkbox${j}' type='checkbox' class='form-check-input' onClick='output(${j}, ${empcode})' /></td>
+                        </tr>`;
+            }
+            tab += `</tbody></table>`;
+            js('#pnl_disp').html(tab);
+        }
+
+        function dispempname() {
+            var empid = js('#txt_Ecod').val();
+            if (empid === "") return;
+
+            var reqData = "HOSTEL_VERIFY_CALL_3^" + empid + "^1";
+            js.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas2: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var eName = data[0].EMP_NAME || data[0].emp_name || Object.values(data[0])[0];
+                        js('#txt_enam').val(eName);
+                    } else {
+                        js('#txt_enam').val("");
+                        Swal.fire("Error", "Employee Does Not Exist..", "error");
+                    }
+                }
+            });
+        }
+
+        function btn_Add_onclick() {
+            var empid = js('#txt_Ecod').val();
+            if (empid === "") {
+                Swal.fire("Warning", "ENTER EMPLOYEE CODE Please.....", "warning");
+                return;
+            }
+
+            var reqData = "HOSTEL_VERIFY_CALL_4^" + empid + "^1";
+            js.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var vals = Object.values(data[0]);
+                        var str = "";
+                        if (vals.length === 1 && typeof vals[0] === 'string' && vals[0].indexOf('~') !== -1) {
+                            str = vals[0] + "!";
+                        } else {
+                            var r = data[0];
+                            str = (r.EMP_CODE || r.emp_code || "") + "~" + (r.EMP_NAME || r.emp_name || "") + "~" + (r.BRANCH_ID || r.branch_id || "") + "~" + (r.BRANCH_NAME || r.branch_name || "") + "!";
+                        }
+                        var currData = js('#hdnData').val();
+                        js('#hdnData').val(currData + str);
+                        dispTable();
+                    } else {
+                        Swal.fire("Error", "No Data found .. ", "error");
+                    }
+                }
+            });
+        }
+
+        function dispTable() {
+            var dataStr = js('#hdnData').val();
+            if (dataStr === "") {
+                js('#Panel1').empty();
+                js('#txt_Ecod').val("");
+                return;
+            }
+
+            var row = dataStr.split("!");
+            var tab = `<table class='inner-data-table'>
+                        <thead>
+                            <tr>
+                                <th>EMP CODE</th>
+                                <th>EMP NAME</th>
+                                <th>BRANCH ID</th>
+                                <th>BRANCH NAME</th>
+                                <th>FIXED ASSET</th>
+                                <th>DELETE</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            for (var n = 0; n < row.length - 1; n++) {
+                var col = row[n].split("~");
+                tab += `<tr>
+                            <td class='text-center'>${col[0]}</td>
+                            <td class='text-start'>${col[1]}</td>
+                            <td class='text-center'>${col[2]}</td>
+                            <td class='text-start'>${col[3]}</td>
+                            <td class='text-center' style='white-space:nowrap;'>
+                                <input id='yes${n}' type='radio' name='YeN${n}' value='1' onClick='addfxed(${n}, ${col[2]}, 1)' /> <label for='yes${n}' class='me-2'>Yes</label>
+                                <input id='No1${n}' type='radio' name='YeN${n}' value='0' onClick='addfxed(${n}, ${col[2]}, 0)' /> <label for='No1${n}'>No</label>
+                            </td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="delete_row(${n})" class="text-danger fw-bold text-decoration-none">Del</a></td>
+                        </tr>`;
+            }
+            tab += `</tbody></table>`;
+            js('#Panel1').html(tab);
+            js('#txt_Ecod').val("");
+        }
+
+        function Verfyfxed(hkm, h, p) {
+            var data = "";
+            var rows = js('#hdnDisplay').val().split("!");
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (hkm == k) {
+                    data += rows[k] + "~" + p + "!";
+                }
+            }
+            js('#hdnFxdVery').val(js('#hdnFxdVery').val() + data);
+        }
+
+        function addfxed(hkm, h, p) {
+            var data = "";
+            var rows = js('#hdnData').val().split("!");
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (hkm == k) {
+                    data += rows[k] + "~" + p + "!";
+                }
+            }
+            js('#hdnFxd').val(js('#hdnFxd').val() + data);
+        }
+
+        function viewf(h) {
+            Swal.fire("Info", "Asset View triggered for Emp: " + h, "info");
+        }
+
+        function output(hkm, h) {
+            var currentList = js('#Hidd_removeCustList').val();
+            if (js('#Checkbox' + hkm).is(':checked')) {
+                js('#Hidd_removeCustList').val(currentList + h + "!");
+            } else {
+                var rows = currentList.split("!");
+                var newData = "";
+                for (var i = 0; i < rows.length - 1; i++) {
+                    if (rows[i] !== String(h)) {
+                        newData += rows[i] + "!";
+                    }
+                }
+                js('#Hidd_removeCustList').val(newData);
+            }
+        }
+
+        function delete_row(a) {
+            var rows = js('#hdnData').val().split("!");
+            var data = "";
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (k !== a) data += rows[k] + "!";
+            }
+            js('#hdnData').val(data);
+            dispTable();
+        }
+
+        function delf(m) {
+            var rows = js('#hdnDisplay').val().split("!");
+            var new_tran = "";
+            for (var k = 0; k < rows.length - 1; k++) {
+                if (k !== m) new_tran += rows[k] + "!";
+            }
+            js('#hdnDisplay').val(new_tran);
+            showDetails();
+        }
+
+        function bttnRemove_onclick() {
+            var removelist = js('#Hidd_removeCustList').val();
+            var cmbhostel = js('#cmb_hostel').val();
+
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select Hostel From List!!", "warning");
+                return false;
+            }
+            if (removelist == "") {
+                Swal.fire("Warning", "Select Employee To Remove!!", "warning");
+                return false;
+            }
+
+            var reqData = "HOSTEL_VERIFY_REMOVE_EMP^" + removelist + "~" + cmbhostel + "~" + usr_id + "~" + firm_id + "^1";
+
+            js.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var status = data[0].STATUS || data[0].status;
+                        var msg = data[0].RES || data[0].res || "Processed";
+
+                        Swal.fire("Result", msg, status == 1 ? "success" : "info").then(() => {
+                            js('#Hidd_removeCustList').val("");
+                            disphostels();
+                        });
+                    } else {
+                        Swal.fire("Error", "Failed to process removal.", "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
+
+        function uploadDocumentFile(base64String, cmbhostel, callback) {
+            var uploadReqData = "HOSTEL_VERIFY_UPLOAD_DOC^" + cmbhostel + "~" + usr_id + "~" + base64String + "^1";
+            js.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: uploadReqData },
+                success: function (res) {
+                    if (callback) callback(true);
+                },
+                error: function () {
+                    if (callback) callback(false);
+                }
+            });
+        }
+
+        function btn_VerifyOnClick() {
+            var cmbhostel = js('#cmb_hostel').val();
+            var RemarkHostel = js('#txt_Remark').val();
+            var RemarkStayorNot = js('#txt_stay_or_not').val();
+            var fxdvery = js('#hdnFxdVery').val();
+            var verfydtl = js('#hdnDisplay').val();
+
+            var fileInput = document.getElementById('FileUpload1');
+            
+            if (fileInput.files.length === 0) {
+                Swal.fire("Warning", "Please Upload Document!!!", "warning");
+                return false;
+            }
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select hostel from list!!", "warning");
+                return false;
+            }
+            if (verfydtl !== "" && verfydtl !== "!") {
+                if (fxdvery === "") {
+                    Swal.fire("Warning", "Select Fixed Asset Condition for already existing employee!!", "warning");
+                    return false;
+                }
+            }
+            if (RemarkStayorNot === "") {
+                Swal.fire("Warning", "Hostel employees count need to specify!", "warning");
+                return false;
+            }
+            if (js('#rbBad').is(':checked') && RemarkHostel === "") {
+                Swal.fire("Warning", "Enter Remarks!!!", "warning");
+                return false;
+            }
+
+            var hos_cong = js('#rbGood').is(':checked') ? "1" : "0";
+            var hos_conb = js('#rbBad').is(':checked') ? "1" : "0";
+            var stay_orNot = js('#rd_yes').is(':checked') ? "1" : "2"; 
+            var combinedRemark = RemarkHostel + "®" + stay_orNot + "®" + RemarkStayorNot;
+
+            var safe_fxdvery = fxdvery.replace(/~/g, '|');
+
+            var reqData = "HOSTEL_VERIFY_EXECUTE_VERIFY^" + cmbhostel + "~" + safe_fxdvery + "~" + usr_id + "~" + firm_id + "~" + hos_cong + "~" + hos_conb + "~" + combinedRemark + "^1";
+
+            Swal.fire({ title: "Verifying...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var fullBase64 = e.target.result;
+                var base64Data = fullBase64.split(',')[1]; 
+
+                js.ajax({
+                    type: "POST",
+                    url: postApiUrl(), 
+                    data: { datas: reqData },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var status = data[0].STATUS || data[0].status;
+                            var msg = data[0].RES || data[0].res;
+                            
+                            uploadDocumentFile(base64Data, cmbhostel, function(success) {
+                                if(success) {
+                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                } else {
+                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                }
+                            });
+                        } else {
+                            Swal.fire("Error", "Failed to verify employee.", "error");
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Server connection failed.", "error");
+                    }
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function btn_ConfirmOnClick() {
+            var cmbhostel = js('#cmb_hostel').val();
+            var hdn_add_1Emp = js('#hdnData').val();
+            var fxdvery = js('#hdnFxdVery').val();
+            var fxd = js('#hdnFxd').val();
+            var verfydtl = js('#hdnDisplay').val();
+            var RemarkHostel = js('#txt_Remark').val();
+            
+            var fileInput = document.getElementById('FileUpload1');
+
+            if (fileInput.files.length === 0) {
+                Swal.fire("Warning", "Please Upload Document!!!", "warning");
+                return false;
+            }
+            if (cmbhostel == "-1") {
+                Swal.fire("Warning", "Select hostel from list!!", "warning");
+                return false;
+            }
+            if (fxd === "" && hdn_add_1Emp !== "") {
+                Swal.fire("Warning", "Select Fixed Asset Condition!!", "warning");
+                return false;
+            }
+            if (verfydtl !== "" && verfydtl !== "!") {
+                if (fxdvery === "") {
+                    Swal.fire("Warning", "Select Fixed Asset Condition for already existing employee!!", "warning");
+                    return false;
+                }
+            }
+            if (hdn_add_1Emp === "") {
+                Swal.fire("Warning", "No Employees found to insert,\n Add employees to list by INSERT->>ADD TO LIST", "warning");
+                return false;
+            }
+
+            var hos_cong = js('#rbGood').is(':checked') ? "1" : "0";
+            var hos_conb = js('#rbBad').is(':checked') ? "1" : "0";
+
+            var safe_fxd = fxd.replace(/~/g, '|');
+            var safe_fxdvery = fxdvery.replace(/~/g, '|');
+
+            var reqData = "HOSTEL_VERIFY_EXECUTE_CONFIRM^" + safe_fxd + "~" + cmbhostel + "~" + usr_id + "~" + firm_id + "~" + hos_cong + "~" + hos_conb + "~" + RemarkHostel + "~" + safe_fxdvery + "^1";
+
+            Swal.fire({ title: "Confirming...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var fullBase64 = e.target.result;
+                var base64Data = fullBase64.split(',')[1]; 
+
+                js.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var status = data[0].STATUS || data[0].status;
+                            var msg = data[0].RES || data[0].res;
+                            
+                            uploadDocumentFile(base64Data, cmbhostel, function(success) {
+                                if (success) {
+                                    Swal.fire("Result", msg + " & Document Uploaded.", "success").then(() => resetForm());
+                                } else {
+                                    Swal.fire("Warning", msg + " but Document Upload failed.", "warning").then(() => resetForm());
+                                }
+                            });
+                        } else {
+                            Swal.fire("Error", "Failed to confirm employee.", "error");
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Server connection failed.", "error");
+                    }
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetForm() {
+            js('#hdnDisplay').val("");
+            js('#hdnData').val("");
+            js('#hdnFxdVery').val("");
+            js('#hdnFxd').val("");
+            js('#txt_Ecod').val("");
+            js('#txt_enam').val("");
+            js('#txt_stay_or_not').val("");
+            js('#FileUpload1').val("");
+            js('#pnl_disp').empty();
+            js('#Panel1').empty();
+            
+            js('input[name="hostelCond"][value="GOOD"]').prop("checked", true);
+            js('input[name="stayCond"][value="YES"]').prop("checked", true);
+            toggleRemark();
+        }
+    </script>
+</body>
+</html>
+
