@@ -1,140 +1,277 @@
-
-<%@ Page Language="VB" AutoEventWireup="false" CodeFile="Rpt_hostelItem_individual.aspx.vb" Inherits="Hostel_Item_individual_rpt"  Title ="Hostel Individual List.hkm"%>
-
-<%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
-    Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
-<%@ Register Assembly="CrystalDecisions.Web, Version=10.2.3600.0, Culture=neutral, PublicKeyToken=692fbea5521e1304"
-    Namespace="CrystalDecisions.Web" TagPrefix="CR" %>
-
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" >
-<head runat="server">
-    <title>Untitled Page</title>
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-<script language="javascript" type="text/javascript" >
-// <!CDATA[
-
-function Button1_onclick()
-
-{
-window.open('./home.aspx','_self')
+@{
+    ViewData["Title"] = "Hostel Individual List";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HOSTEL INDIVIDUAL LIST</title>
 
-// ]]>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
 
-</script>
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
 
-   
+        .main-container-css {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f4f6f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
 
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
-    <link href="/aspnet_client/System_Web/2_0_50727/CrystalReportWebFormViewer3/css/default.css"
-        rel="stylesheet" type="text/css" />
+        .header-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
 
-   
+        .emp-details-box {
+            background-color: #ffffff;
+            border: 1px solid #b0bec5;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border: 1px solid #b0bec5;
+        }
+
+        .table-custom th {
+            background-color: #85c1e9 !important;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+        }
+
+        .table-custom td {
+            border: 1px solid #b0bec5;
+            padding: 8px 10px;
+            vertical-align: middle;
+            font-size: 13px;
+        }
+
+        .nav-links {
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #0056b3;
+            margin-right: 15px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+            .main-container-css {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+        }
+    </style>
 </head>
-<body style="text-align: left" >
-    <form id="form1" runat="server" >
+<body>
+    <div class="main-container-css">
+        
+        <div class="nav-links no-print">
+            <a href="javascript:void(0)" onclick="window.history.back()"><i class="bi bi-arrow-left"></i> Back</a>
+            <a href="/Home/Index"><i class="bi bi-house-door"></i> Home</a>
+            <a href="javascript:void(0)" onclick="window.print()" class="float-end text-dark"><i class="bi bi-printer"></i> Print Report</a>
+        </div>
 
+        <div class="header-title">HOSTEL ITEM WISE DETAILS</div>
 
-    <div style="text-align: left">
-        <table style="width: 100%">
-            <tr  style="width: 100%">
-                <td colspan="3" style="text-align: left; width: 100% ;"><a href ="Rpt_HostelItemSelection.aspx" >&nbsp;Back&nbsp;</a> &nbsp;&nbsp; &nbsp;&nbsp;  <a href ="../home.aspx">Home</a>
-                    </td>
-            </tr>
-            <tr  style="width: 100%">
-                <td style="height: 63px; width: 100% " colspan="3">
-                    <CR:CrystalReportViewer ID="CrystalReportViewer1" runat="server" AutoDataBind="true" DisplayGroupTree="False" Width ="100%" />
-                </td>
-            </tr>
-        </table>
-    
+        <div class="emp-details-box" id="empDetailsBox" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <span class="text-muted">Employee Code:</span> <span id="lblEmpCode" class="text-primary"></span>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="text-muted">Employee Name:</span> <span id="lblEmpName" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="row mt-2" id="dateFilterRow" style="display: none;">
+                <div class="col-md-12 text-center text-muted" style="font-size: 12px;">
+                    Date Filter Applied: <span id="lblFromDate" class="fw-bold text-dark"></span> to <span id="lblToDate" class="fw-bold text-dark"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-custom" id="reportTable">
+                <thead>
+                    <tr>
+                        <th>FLAT NO</th>
+                        <th>FLAT NAME</th>
+                        <th>ITEM NAME</th>
+                        <th>MAKE NAME</th>
+                        <th>TOTAL COUNT</th>
+                        <th>TOTAL PRICE</th>
+                        <th>HOSTEL ITEM NO</th>
+                        <th>ENTER DATE</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Loading report data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-        <br />
-        &nbsp;
-    </form>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const firm_id = '@ViewData["FirmID"]';
+
+        $(document).ready(function () {
+            loadReportData();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
+        }
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param) || "";
+        }
+
+        function loadReportData() {
+            var empCode = getQueryParam("empcode");
+            var choice = getQueryParam("Choice");
+            var fromDt = getQueryParam("fromdt");
+            var toDt = getQueryParam("todt");
+
+            if (!empCode) {
+                Swal.fire("Error", "Employee Code is missing.", "error");
+                $('#reportTableBody').html(`<tr><td colspan="8" class="text-center text-danger py-4">Invalid parameters.</td></tr>`);
+                return;
+            }
+
+            $('#lblEmpCode').text(empCode);
+            $('#empDetailsBox').show();
+
+            if (choice === "1" || choice === 1) {
+                $('#lblFromDate').text(fromDt);
+                $('#lblToDate').text(toDt);
+                $('#dateFilterRow').show();
+            }
+
+            // 1. Fetch Employee Name
+            var empReqData = "HOSTEL_VERIFY_VIEW_ASSET_EMP_NAME^" + empCode + "^1";
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: empReqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var empName = data[0].EMP_NAME || data[0].emp_name || Object.values(data[0])[0];
+                        $('#lblEmpName').text(empName);
+                    } else {
+                        $('#lblEmpName').text("UNKNOWN EMPLOYEE");
+                    }
+                },
+                error: function () {
+                    $('#lblEmpName').text("ERROR LOADING NAME");
+                }
+            });
+
+            // 2. Fetch Report Data
+            var safeFromDt = fromDt ? fromDt : " ";
+            var safeToDt = toDt ? toDt : " ";
+            var rptReqData = "HOSTEL_VERIFY_VIEW_ASSET^" + empCode + "~" + choice + "~" + safeFromDt + "~" + safeToDt + "~" + firm_id + "^1";
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: rptReqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var tbody = "";
+
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var flatNo = row.FLAT_NO || row.flat_no || "";
+                            var flatName = row.FLAT_NAME || row.flat_name || "";
+                            var itemName = row.ITEM_NAME || row.item_name || "";
+                            var makeName = row.MAKE_NAME || row.make_name || "";
+                            var totalCount = row.TOTAL_COUNT || row.total_count || "0";
+                            var totalPrice = row.TOTAL_PRICE || row.total_price || "0.00";
+                            var hostelItemNo = row.HOSTELITEM_NO || row.hostelitem_no || "";
+                            var enterDate = row.ENTER_DATE || row.enter_date || "";
+
+                            tbody += `<tr>
+                                        <td class="text-center">${flatNo}</td>
+                                        <td>${flatName}</td>
+                                        <td>${itemName}</td>
+                                        <td>${makeName}</td>
+                                        <td class="text-center fw-bold text-primary">${totalCount}</td>
+                                        <td class="text-end fw-bold text-success">₹${totalPrice}</td>
+                                        <td class="text-center">${hostelItemNo}</td>
+                                        <td class="text-center">${enterDate}</td>
+                                      </tr>`;
+                        });
+                        $('#reportTableBody').html(tbody);
+                    } else {
+                        var errorHtml = `<tr>
+                                            <td colspan="8" class="text-center py-5">
+                                                <div class="text-danger fw-bold mb-2">Caution: Wrong ID or Wrong date selected.</div>
+                                                <div class="text-muted">Details are not available. Date selection is based on item delivery date.</div>
+                                            </td>
+                                         </tr>`;
+                        $('#reportTableBody').html(errorHtml);
+                        
+                        Swal.fire({
+                            title: 'No Data Found',
+                            html: 'Caution: Wrong ID or Wrong date selected.<br>Details are not available.<br>Date selection based on item delivery date.',
+                            icon: 'warning'
+                        });
+                    }
+                },
+                error: function () {
+                    $('#reportTableBody').html(`<tr><td colspan="8" class="text-center text-danger py-4">Failed to load report data from server.</td></tr>`);
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
+    </script>
 </body>
 </html>
-
-    Imports System.Data
-Imports CrystalDecisions.Shared
-Imports CrystalDecisions.CrystalReports.Engine
-
-Partial Class Hostel_Item_individual_rpt
-    Inherits System.Web.UI.Page
-    Dim custrep As New ReportDocument
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-
-        '===================================
-        ' NEW MODULE
-        ' Author: Harikrishnan M.
-        ' Date: 06/Dec/2011
-        ' Module: Hostel Module
-        '===================================
-        'IF ANY  MODIIFCATION
-
-        '===================================
-
-        Dim oh As New helper.oracle.OracleHelper
-        Dim sql, userCode As String
-        Dim dt1, dt2 As New DataTable
-
-        Dim FromDate As String = Me.Request.QueryString("fromdt")
-        Dim ToDate As String = Me.Request.QueryString("todt")
-        Dim EmpCode As Double = CDbl(Me.Request.QueryString("empcode"))
-
-
-
-        Session("rptHead") = "HOSTEL ITEM WISE DETAILS"
-        If Me.Request.QueryString("Choice") = 1 Then
-            sql = "select t.flat_no,  b.flat_name,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date  from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and to_date(t.enterdate) between to_date('" & FromDate & "') and  to_date('" & ToDate & "')  and b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name, a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
-        Else
-
-            sql = "select t.flat_no,  b.flat_name,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date  from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and  b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name, a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
-        End If
-        dt1 = oh.ExecuteDataSet(sql).Tables(0)
-        dt2 = oh.ExecuteDataSet("select e.emp_name from emp_master e where e.emp_code=" & EmpCode & "").Tables(0)
-        If dt2.Rows.Count > 0 Then
-            userCode = dt2.Rows(0)(0)
-        Else
-            userCode = ""
-        End If
-
-        If dt1.Rows.Count > 0 Then
-            custrep.Load(Server.MapPath("rpt_hostelItem_individual.rpt"), OpenReportMethod.OpenReportByTempCopy)
-            custrep.SetDataSource(dt1)
-            custrep.SetParameterValue("firm", Me.Session("firm_name"))
-            custrep.SetParameterValue("head1", Session("rptHead"))
-            custrep.SetParameterValue("userCode", userCode)
-            Me.CrystalReportViewer1.ReportSource = custrep
-        Else
-            Dim cl_script As New StringBuilder
-            cl_script.Append("alert('<html><div>Caution: \nWrong ID or Wrong date selected.\nDetails are not available.\nDate selection based on item delivery date</div></html>');")
-            Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "inv11", cl_script.ToString, True)
-        End If
-
-
-    End Sub
-
-    Protected Sub Page_Unload(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Unload
-        custrep.Close()
-        custrep.Dispose()
-    End Sub
-End Class
-
