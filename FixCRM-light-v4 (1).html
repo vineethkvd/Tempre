@@ -1,1 +1,321 @@
 
+<%@ Page Language="VB" MasterPageFile="~/edp.master" AutoEventWireup="false" CodeFile="work_or_not.aspx.vb" Inherits="Hostel_work_or_not" title="Untitled Page" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="cph_edp" Runat="Server">
+<script language ="javascript" type="text/javascript">
+    function Btn_exit_onclick() 
+        {
+            window.open('../Hostel/amahverification.aspx','_self');
+        }
+
+    function checkGridFill() 
+        {     
+        alert("hcgchg");
+            var gv = document.getElementById("<%=grdApprove.ClientID%>");                         
+            for (var i = 1; i < gv.rows.length; i++) 
+                {             
+                    if (gv.rows[i].cells[6].getElementsByTagName("INPUT")[0].checked == true) 
+                        {                
+                            gv.rows[i].cells[6].getElementsByTagName("INPUT")[0].focus;
+                            return true;                                                     
+                        }
+                }                                                                                      
+        return false;        
+        }
+        
+   
+        
+    function appchk()
+        {            
+            if(checkGridFill()==false)
+            {    
+              alert('Choose file......!!!!');          
+              return false; 
+            }  
+            var n=confirm("Are you sure to approve the selected records...");
+            if(n==true)
+              return true;
+            else
+              return false;                                              
+        }
+        
+      function checkAll(this) {   
+       alert(this);    
+        var gv = document.getElementById("<%=grdApprove.ClientID%>");
+        var rbs = gv.getElementsByTagName("input");
+              
+        var row = rb.parentNode.parentNode;
+         alert(gv);         
+         alert(rbs); 
+                alert(row);   
+                
+        for (var i = 0; i < rbs.length; i++) {                    
+            if (rb.checked == true) {
+               rbs[i].checked=true;
+            }
+            else{
+               rbs[i].checked=false;
+            }
+        }
+    }      
+      
+function lengthCheck(ctrl1,evt){
+  var charCode = (evt.which) ? evt.which : event.keyCode
+  if(charCode!=8){
+  if(charCode==49||charCode==54)
+   return false;
+  var s= ctrl1.value;  
+  var n=s.length;
+  if(n>=200){   
+    return false;
+  }
+  }
+}       
+//    function selectitem()
+//        {
+//            var gv = document.getElementById("<%=grdApprove.ClientID%>"); 
+//            for (var i = 1; i < gv.rows.length; i++)
+//                {
+//                   gv.rows[i].cells[5].getElementsByTagName("INPUT")[0].checked = true
+//                } 
+//            
+//        }
+//    function deselectitem()
+//        {
+//            var gv = document.getElementById("<%=grdApprove.ClientID%>"); 
+//            for (var i = 1; i < gv.rows.length; i++)
+//                {
+//                   gv.rows[i].cells[5].getElementsByTagName("INPUT")[0].checked = false             
+//                } 
+//            
+//        }
+                 
+</script>
+<center>
+    <asp:ScriptManager ID="ScriptManager1" runat="server">     
+    </asp:ScriptManager>
+    <div style="background-color:White;">
+<br />
+<br />
+        <table style="width:1200px;border-right: black thin solid; border-top: black thin solid; border-left: black thin solid; border-bottom: black thin solid;background-color: buttonface; background-image: url(../Images/grayShade2.jpg);" border="1">
+             <tr>
+             <td colspan="4" style="width:20%; height: 50px; font-size: 20px;">
+                 <asp:Label ID="Label4" runat="server" Font-Bold="True" Font-Size="X-Large" ForeColor="Navy"
+                     Text="HOSTAL ASSETS  "></asp:Label></td>
+             </tr>
+            <tr>
+                <td colspan="4" style="font-size: 20px; width: 20%; height: 24px;">
+                    &nbsp;</td>
+            </tr>
+            <tr id="row1">
+                        <td align="center" colspan="4" style="border-left-color: black; border-bottom-color: black;
+                            border-top-style: solid; border-top-color: black; border-right-style: solid;
+                            border-left-style: solid; border-right-color: black; border-bottom-style: solid; font-weight: bold; width: 100%; height:auto;">
+                            <asp:GridView ID="grdApprove" runat="server" BackColor="White" BorderColor="#CCCCCC"
+                                BorderStyle="None" BorderWidth="1px" CellPadding="3" Width="98%"
+                                AutoGenerateColumns="False" Font-Names="Times New Roman">
+                                <FooterStyle BackColor="White" ForeColor="#000066" />
+                                <RowStyle ForeColor="#000066" Font-Names="Cambria"  Font-Size ="Small"  />
+                                <SelectedRowStyle BackColor="#669999" Font-Bold="True" ForeColor="White" />
+                                <PagerStyle BackColor="White" ForeColor="#000066" HorizontalAlign="Left" />
+                                <HeaderStyle BackColor="#006699" Font-Bold="True" ForeColor="White" Font-Names="Gautami" />
+                                <AlternatingRowStyle BorderColor="Red" BorderStyle="Solid" />
+                                <Columns>
+                                  
+                                    <asp:BoundField DataField="flat_no" HeaderText="FLAT NO" >
+                                        <ItemStyle Width="150px" />
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="flat_name" HeaderText="FLAT NAME" ReadOnly="True">
+                                        <ItemStyle Width="200px" />
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="item_name" HeaderText="ITEM NAME" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                      <asp:BoundField DataField="item_id" HeaderText="ITEM NO" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                      <asp:BoundField DataField="make_name" HeaderText="MAKE NAME" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="total_count" HeaderText="COUNT" ReadOnly="True" >
+                                        <ItemStyle Width="150px" />
+                                    </asp:BoundField>
+                                     <asp:BoundField DataField="total_price" HeaderText="TOTAL PRICE" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                     <asp:BoundField DataField="enter_date" HeaderText="ENTER DATE" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                     <asp:BoundField DataField="user_code" HeaderText="EMPLOYEE CODE" >
+                                        <ItemStyle Width="600px" />
+                                    </asp:BoundField>
+                                    <asp:TemplateField HeaderText="Working">
+                    <EditItemTemplate>
+                        <asp:TextBox ID="txt_ans" runat="server"></asp:TextBox>
+                    </EditItemTemplate>
+                    <ItemTemplate>
+                        <asp:DropDownList ID="ddlworking" runat="server" Height="28px" Width="128px" >
+                            <asp:ListItem Value="0">SELECT</asp:ListItem>
+                            <asp:ListItem Value="1">YES </asp:ListItem>
+                            <asp:ListItem Value="2">NO </asp:ListItem>
+                        </asp:DropDownList>
+                    </ItemTemplate>
+                </asp:TemplateField>
+                                      <asp:TemplateField HeaderText="Available">
+                    <EditItemTemplate>
+                        <asp:TextBox ID="txt_ans" runat="server"></asp:TextBox>
+                    </EditItemTemplate>
+                    <ItemTemplate>
+                        <asp:DropDownList ID="ddlavailable" runat="server" Height="28px" Width="128px" >
+                            <asp:ListItem Value="0">SELECT</asp:ListItem>
+                            <asp:ListItem Value="1">YES </asp:ListItem>
+                            <asp:ListItem Value="2">NO </asp:ListItem>
+                        </asp:DropDownList>
+                    </ItemTemplate>
+                </asp:TemplateField>
+                                </Columns>
+                            </asp:GridView>
+                        </td>
+                    </tr>
+            
+            <tr>
+                <td colspan="4" style="font-size: 20px; width: 20%; height: 50px;">
+                    &nbsp;<asp:Button ID="cmdApprove" runat="server" Text="Confirm" Style="font-weight: 700;
+                  font-size: 10pt; width: 80px; font-family: 'Times New Roman'; height: 25px"/>
+                    &nbsp;<asp:Button ID="cmdexit" runat="server" Text="Exit" Style="font-weight: 700;
+                  font-size: 10pt; width: 80px; font-family: 'Times New Roman'; height: 25px"/>
+                     </td>
+            </tr>
+        </table>
+        <br />
+<br />
+    </div>
+</center>
+
+</asp:Content>
+
+Imports System.Data
+Imports System.Data.OracleClient
+Imports System.IO
+
+Partial Class Hostel_work_or_not
+    Inherits System.Web.UI.Page
+    Dim brid, flg As Integer
+    Dim dt, dt1, dtl2, dt2, dt3 As New DataTable
+    Dim OH As New Helper.Oracle.OracleHelper
+    Dim userid As Integer
+    Dim result As String
+    Dim output As String
+    Dim flag As String
+
+ 
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If Not IsPostBack Then
+            Dim sql, userCode As String
+            Dim dt1, dt2 As New DataTable
+
+
+            Dim FromDate As String = Me.Request.QueryString("fromdt")
+            Dim ToDate As String = Me.Request.QueryString("todt")
+            Dim EmpCode As Double = CDbl(Me.Request.QueryString("empcode"))
+            Session("rptHead") = "HOSTEL ITEM WISE DETAILS"
+
+            sql = "select count(*)from hostel_item_master    t,tbl_rent_building_mst b,hostel_asset_master   a,employee_master       e where e.emp_code = t.user_code and b.flat_no = t.flat_no and t.status_id = 1 and a.item_id = t.item_id"
+            dt1 = OH.ExecuteDataSet(sql).Tables(0)
+            If dt1.Rows(0)(0) = 0 Then
+                Dim cl_script0 As New System.Text.StringBuilder
+                cl_script0.Append("alert('No data .....');")
+                cl_script0.Append("window.open('../Hostel/amahverification.aspx','_self');")
+                Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
+            Else
+
+                If Me.Request.QueryString("Choice") = 1 Then
+                    sql = "select t.flat_no,  b.flat_name ,a.item_id,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and to_date(t.enterdate) between to_date('" & FromDate & "') and  to_date('" & ToDate & "')  and b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name, a.item_id,a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
+                Else
+
+                    sql = "select t.flat_no,  b.flat_name ,a.item_id,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and  b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name,a.item_id, a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
+                End If
+                dt2 = OH.ExecuteDataSet(sql).Tables(0)
+                dt3 = OH.ExecuteDataSet("select e.emp_name from emp_master e where e.emp_code=" & EmpCode & "").Tables(0)
+                If dt2.Rows.Count > 0 Then
+                    userCode = dt2.Rows(0)(0)
+                Else
+                    userCode = ""
+                End If
+              
+                grdApprove.DataSource = dt2
+                grdApprove.DataBind()
+                Me.cmdApprove.Attributes.Add("onClick", "return checkGridFill()")
+               
+
+            End If
+
+        End If
+
+
+
+    End Sub
+    Public Sub checkAll(ByVal value)
+
+    End Sub
+
+    Protected Sub cmdApprove_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles cmdApprove.Click
+        Dim pr(1) As OracleParameter
+        Dim usr_id
+        usr_id = Session("user_id").ToString.Split("!")
+        Dim i As Integer
+        Dim data As String = userid & "^"
+        For i = 0 To grdApprove.Rows.Count - 1
+            Dim fno As String = Me.grdApprove.Rows(i).Cells(0).Text
+            Dim fname As String = Me.grdApprove.Rows(i).Cells(1).Text
+            Dim iname As String = Me.grdApprove.Rows(i).Cells(2).Text
+            Dim ino As String = Me.grdApprove.Rows(i).Cells(3).Text
+            Dim mname As String = Me.grdApprove.Rows(i).Cells(4).Text
+            Dim count As String = Me.grdApprove.Rows(i).Cells(5).Text
+            Dim price As String = Me.grdApprove.Rows(i).Cells(6).Text
+            Dim edate As String = Me.grdApprove.Rows(i).Cells(7).Text
+            Dim EMP As String = Me.grdApprove.Rows(i).Cells(8).Text
+            Dim work As String = Me.grdApprove.Rows(i).Cells(9).Text
+            Dim avai As String = Me.grdApprove.Rows(i).Cells(10).Text
+
+
+
+
+            work = DirectCast(grdApprove.Rows(i).FindControl("ddlworking"), DropDownList).SelectedValue
+
+            avai = DirectCast(grdApprove.Rows(i).FindControl("ddlavailable"), DropDownList).SelectedValue
+
+            output += fno & "~" & ino & "~" & work & "~" & avai & "~" & EMP & "~" & usr_id(0) & "!"
+            flag = "WORK"
+        Next
+
+
+        ' Dim message As String = ""
+
+        pr(0) = New OracleParameter("input_string", OracleType.VarChar, 5000)
+        pr(0).Value = output
+        pr(0).Direction = ParameterDirection.Input
+
+        pr(1) = New OracleParameter("P_flag", OracleType.VarChar, 20)
+        pr(1).Value = flag
+        pr(1).Direction = ParameterDirection.Input
+
+   
+        OH.ExecuteNonQuery("PROC_HOSTEL_ASSETS", pr)
+        Dim cl_script0 As New System.Text.StringBuilder
+        cl_script0.Append("alert('Data updated .....');")
+        Response.Write("<script language='javascript'> { window.close(); }</script>")
+        'cl_script0.Append("window.open('../Hostel/amahverification.aspx','_self');")
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
+    End Sub
+   
+    
+   
+    Protected Sub cmdexit_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles cmdexit.Click
+        Dim cl_script0 As New System.Text.StringBuilder
+
+        Server.Transfer("amahverification.aspx")
+
+        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
+    End Sub
+End Class
