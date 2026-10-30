@@ -1,321 +1,335 @@
+@{
+    ViewData["Title"] = "Hostel Assets Status";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // Ensure this matches your project layout
+}
 
-<%@ Page Language="VB" MasterPageFile="~/edp.master" AutoEventWireup="false" CodeFile="work_or_not.aspx.vb" Inherits="Hostel_work_or_not" title="Untitled Page" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="cph_edp" Runat="Server">
-<script language ="javascript" type="text/javascript">
-    function Btn_exit_onclick() 
-        {
-            window.open('../Hostel/amahverification.aspx','_self');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HOSTEL ASSETS</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
         }
 
-    function checkGridFill() 
-        {     
-        alert("hcgchg");
-            var gv = document.getElementById("<%=grdApprove.ClientID%>");                         
-            for (var i = 1; i < gv.rows.length; i++) 
-                {             
-                    if (gv.rows[i].cells[6].getElementsByTagName("INPUT")[0].checked == true) 
-                        {                
-                            gv.rows[i].cells[6].getElementsByTagName("INPUT")[0].focus;
-                            return true;                                                     
-                        }
-                }                                                                                      
-        return false;        
+        .main-container-css {
+            width: 100%;
+            max-width: 1300px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border: 2px solid #000000;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-title {
+            text-align: left;
+            font-weight: bold;
+            font-size: 24px;
+            color: #000080; /* Navy */
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #000000;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+        }
+
+        .table-custom th {
+            background-color: #006699 !important;
+            color: #ffffff !important;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #cccccc;
+        }
+
+        .table-custom td {
+            border: 1px solid #cccccc;
+            padding: 6px 10px;
+            vertical-align: middle;
+            font-size: 13px;
+            color: #000066;
+            font-family: Cambria, Georgia, serif;
         }
         
-   
-        
-    function appchk()
-        {            
-            if(checkGridFill()==false)
-            {    
-              alert('Choose file......!!!!');          
-              return false; 
-            }  
-            var n=confirm("Are you sure to approve the selected records...");
-            if(n==true)
-              return true;
-            else
-              return false;                                              
+        .table-custom tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
-        
-      function checkAll(this) {   
-       alert(this);    
-        var gv = document.getElementById("<%=grdApprove.ClientID%>");
-        var rbs = gv.getElementsByTagName("input");
-              
-        var row = rb.parentNode.parentNode;
-         alert(gv);         
-         alert(rbs); 
-                alert(row);   
-                
-        for (var i = 0; i < rbs.length; i++) {                    
-            if (rb.checked == true) {
-               rbs[i].checked=true;
-            }
-            else{
-               rbs[i].checked=false;
-            }
+
+        .form-select-sm {
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 4px 24px 4px 8px;
+            font-size: 13px;
+            min-width: 100px;
         }
-    }      
-      
-function lengthCheck(ctrl1,evt){
-  var charCode = (evt.which) ? evt.which : event.keyCode
-  if(charCode!=8){
-  if(charCode==49||charCode==54)
-   return false;
-  var s= ctrl1.value;  
-  var n=s.length;
-  if(n>=200){   
-    return false;
-  }
-  }
-}       
-//    function selectitem()
-//        {
-//            var gv = document.getElementById("<%=grdApprove.ClientID%>"); 
-//            for (var i = 1; i < gv.rows.length; i++)
-//                {
-//                   gv.rows[i].cells[5].getElementsByTagName("INPUT")[0].checked = true
-//                } 
-//            
-//        }
-//    function deselectitem()
-//        {
-//            var gv = document.getElementById("<%=grdApprove.ClientID%>"); 
-//            for (var i = 1; i < gv.rows.length; i++)
-//                {
-//                   gv.rows[i].cells[5].getElementsByTagName("INPUT")[0].checked = false             
-//                } 
-//            
-//        }
-                 
-</script>
-<center>
-    <asp:ScriptManager ID="ScriptManager1" runat="server">     
-    </asp:ScriptManager>
-    <div style="background-color:White;">
-<br />
-<br />
-        <table style="width:1200px;border-right: black thin solid; border-top: black thin solid; border-left: black thin solid; border-bottom: black thin solid;background-color: buttonface; background-image: url(../Images/grayShade2.jpg);" border="1">
-             <tr>
-             <td colspan="4" style="width:20%; height: 50px; font-size: 20px;">
-                 <asp:Label ID="Label4" runat="server" Font-Bold="True" Font-Size="X-Large" ForeColor="Navy"
-                     Text="HOSTAL ASSETS  "></asp:Label></td>
-             </tr>
-            <tr>
-                <td colspan="4" style="font-size: 20px; width: 20%; height: 24px;">
-                    &nbsp;</td>
-            </tr>
-            <tr id="row1">
-                        <td align="center" colspan="4" style="border-left-color: black; border-bottom-color: black;
-                            border-top-style: solid; border-top-color: black; border-right-style: solid;
-                            border-left-style: solid; border-right-color: black; border-bottom-style: solid; font-weight: bold; width: 100%; height:auto;">
-                            <asp:GridView ID="grdApprove" runat="server" BackColor="White" BorderColor="#CCCCCC"
-                                BorderStyle="None" BorderWidth="1px" CellPadding="3" Width="98%"
-                                AutoGenerateColumns="False" Font-Names="Times New Roman">
-                                <FooterStyle BackColor="White" ForeColor="#000066" />
-                                <RowStyle ForeColor="#000066" Font-Names="Cambria"  Font-Size ="Small"  />
-                                <SelectedRowStyle BackColor="#669999" Font-Bold="True" ForeColor="White" />
-                                <PagerStyle BackColor="White" ForeColor="#000066" HorizontalAlign="Left" />
-                                <HeaderStyle BackColor="#006699" Font-Bold="True" ForeColor="White" Font-Names="Gautami" />
-                                <AlternatingRowStyle BorderColor="Red" BorderStyle="Solid" />
-                                <Columns>
-                                  
-                                    <asp:BoundField DataField="flat_no" HeaderText="FLAT NO" >
-                                        <ItemStyle Width="150px" />
-                                    </asp:BoundField>
-                                    <asp:BoundField DataField="flat_name" HeaderText="FLAT NAME" ReadOnly="True">
-                                        <ItemStyle Width="200px" />
-                                    </asp:BoundField>
-                                    <asp:BoundField DataField="item_name" HeaderText="ITEM NAME" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                      <asp:BoundField DataField="item_id" HeaderText="ITEM NO" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                      <asp:BoundField DataField="make_name" HeaderText="MAKE NAME" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                    <asp:BoundField DataField="total_count" HeaderText="COUNT" ReadOnly="True" >
-                                        <ItemStyle Width="150px" />
-                                    </asp:BoundField>
-                                     <asp:BoundField DataField="total_price" HeaderText="TOTAL PRICE" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                     <asp:BoundField DataField="enter_date" HeaderText="ENTER DATE" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                     <asp:BoundField DataField="user_code" HeaderText="EMPLOYEE CODE" >
-                                        <ItemStyle Width="600px" />
-                                    </asp:BoundField>
-                                    <asp:TemplateField HeaderText="Working">
-                    <EditItemTemplate>
-                        <asp:TextBox ID="txt_ans" runat="server"></asp:TextBox>
-                    </EditItemTemplate>
-                    <ItemTemplate>
-                        <asp:DropDownList ID="ddlworking" runat="server" Height="28px" Width="128px" >
-                            <asp:ListItem Value="0">SELECT</asp:ListItem>
-                            <asp:ListItem Value="1">YES </asp:ListItem>
-                            <asp:ListItem Value="2">NO </asp:ListItem>
-                        </asp:DropDownList>
-                    </ItemTemplate>
-                </asp:TemplateField>
-                                      <asp:TemplateField HeaderText="Available">
-                    <EditItemTemplate>
-                        <asp:TextBox ID="txt_ans" runat="server"></asp:TextBox>
-                    </EditItemTemplate>
-                    <ItemTemplate>
-                        <asp:DropDownList ID="ddlavailable" runat="server" Height="28px" Width="128px" >
-                            <asp:ListItem Value="0">SELECT</asp:ListItem>
-                            <asp:ListItem Value="1">YES </asp:ListItem>
-                            <asp:ListItem Value="2">NO </asp:ListItem>
-                        </asp:DropDownList>
-                    </ItemTemplate>
-                </asp:TemplateField>
-                                </Columns>
-                            </asp:GridView>
-                        </td>
+
+        .btn-confirm {
+            background-color: #e0e0e0;
+            color: #000;
+            border: 1px solid #000;
+            font-weight: bold;
+            font-family: 'Times New Roman', Times, serif;
+            min-width: 100px;
+        }
+
+        .btn-confirm:hover {
+            background-color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+
+        <div class="header-title">HOSTAL ASSETS</div>
+
+        <div class="table-responsive mb-4">
+            <table class="table-custom" id="grdApprove">
+                <thead>
+                    <tr>
+                        <th>FLAT NO</th>
+                        <th>FLAT NAME</th>
+                        <th>ITEM NAME</th>
+                        <th>ITEM NO</th>
+                        <th>MAKE NAME</th>
+                        <th>COUNT</th>
+                        <th>TOTAL PRICE</th>
+                        <th>ENTER DATE</th>
+                        <th>EMPLOYEE CODE</th>
+                        <th>Working</th>
+                        <th>Available</th>
                     </tr>
-            
-            <tr>
-                <td colspan="4" style="font-size: 20px; width: 20%; height: 50px;">
-                    &nbsp;<asp:Button ID="cmdApprove" runat="server" Text="Confirm" Style="font-weight: 700;
-                  font-size: 10pt; width: 80px; font-family: 'Times New Roman'; height: 25px"/>
-                    &nbsp;<asp:Button ID="cmdexit" runat="server" Text="Exit" Style="font-weight: 700;
-                  font-size: 10pt; width: 80px; font-family: 'Times New Roman'; height: 25px"/>
-                     </td>
-            </tr>
-        </table>
-        <br />
-<br />
+                </thead>
+                <tbody id="grdApproveBody">
+                    <tr>
+                        <td colspan="11" class="text-center text-muted py-4">Loading Assets...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="button" class="btn btn-sm btn-confirm px-4 py-2 me-3" onclick="btn_Confirm_Click()">Confirm</button>
+            <button type="button" class="btn btn-sm btn-confirm px-4 py-2" onclick="btn_Exit_Click()">Exit</button>
+        </div>
+
     </div>
-</center>
 
-</asp:Content>
+    <script>
+        const root = '@ViewData["root"]';
+        const usr_id = '@ViewData["EmpCode"]'; // Assuming this maps to user_id
+        const firm_id = '@ViewData["FirmID"]';
 
-Imports System.Data
-Imports System.Data.OracleClient
-Imports System.IO
+        $(document).ready(function () {
+            loadAssetData();
+        });
 
-Partial Class Hostel_work_or_not
-    Inherits System.Web.UI.Page
-    Dim brid, flg As Integer
-    Dim dt, dt1, dtl2, dt2, dt3 As New DataTable
-    Dim OH As New Helper.Oracle.OracleHelper
-    Dim userid As Integer
-    Dim result As String
-    Dim output As String
-    Dim flag As String
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
+        }
 
- 
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param) || "";
+        }
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        If Not IsPostBack Then
-            Dim sql, userCode As String
-            Dim dt1, dt2 As New DataTable
+        function loadAssetData() {
+            var empCode = getQueryParam("empcode");
+            var choice = getQueryParam("Choice");
+            var fromDt = getQueryParam("fromdt") || " ";
+            var toDt = getQueryParam("todt") || " ";
 
+            if (!empCode) {
+                Swal.fire("Error", "Missing Employee Code.", "error").then(() => window.close());
+                return;
+            }
 
-            Dim FromDate As String = Me.Request.QueryString("fromdt")
-            Dim ToDate As String = Me.Request.QueryString("todt")
-            Dim EmpCode As Double = CDbl(Me.Request.QueryString("empcode"))
-            Session("rptHead") = "HOSTEL ITEM WISE DETAILS"
+            // Split by $ to align with your newer delimiter logic if '~' causes collisions
+            var reqData = "HOSTEL_VERIFY_GET_ASSET_STATUS$" + empCode + "$" + choice + "$" + fromDt + "$" + toDt + "$" + firm_id + "^1";
 
-            sql = "select count(*)from hostel_item_master    t,tbl_rent_building_mst b,hostel_asset_master   a,employee_master       e where e.emp_code = t.user_code and b.flat_no = t.flat_no and t.status_id = 1 and a.item_id = t.item_id"
-            dt1 = OH.ExecuteDataSet(sql).Tables(0)
-            If dt1.Rows(0)(0) = 0 Then
-                Dim cl_script0 As New System.Text.StringBuilder
-                cl_script0.Append("alert('No data .....');")
-                cl_script0.Append("window.open('../Hostel/amahverification.aspx','_self');")
-                Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
-            Else
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var tbody = "";
 
-                If Me.Request.QueryString("Choice") = 1 Then
-                    sql = "select t.flat_no,  b.flat_name ,a.item_id,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and to_date(t.enterdate) between to_date('" & FromDate & "') and  to_date('" & ToDate & "')  and b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name, a.item_id,a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
-                Else
+                    if (data && data.length > 0 && !data[0].EMPTY_STATUS && !data[0].empty_status) {
+                        data.forEach(function (row, index) {
+                            var flatNo = row.FLAT_NO || row.flat_no || "";
+                            var flatName = row.FLAT_NAME || row.flat_name || "";
+                            var itemName = row.ITEM_NAME || row.item_name || "";
+                            var itemId = row.ITEM_ID || row.item_id || "";
+                            var makeName = row.MAKE_NAME || row.make_name || "";
+                            var totalCount = row.TOTAL_COUNT || row.total_count || "0";
+                            var totalPrice = row.TOTAL_PRICE || row.total_price || "0";
+                            var enterDate = row.ENTER_DATE || row.enter_date || "";
+                            var userCode = row.USER_CODE || row.user_code || "";
 
-                    sql = "select t.flat_no,  b.flat_name ,a.item_id,       a.item_name,       a.make_name,       count(t.item_id) total_count,       sum(t.item_amount) total_price,       t.hostelitem_no,       t.user_code,       to_char(t.enterdate) enter_date from hostel_item_master t, tbl_rent_building_mst b, hostel_asset_master a where t.user_code=" & EmpCode & " and  b.flat_no = t.flat_no and t.status_id=1 and b.firm_id=" & Me.Session("firm_id") & " and a.item_id = t.item_id group by t.flat_no, b.flat_name, a.item_name,a.item_id, a.make_name, t.hostelitem_no,t.user_code,to_char(t.enterdate) "
-                End If
-                dt2 = OH.ExecuteDataSet(sql).Tables(0)
-                dt3 = OH.ExecuteDataSet("select e.emp_name from emp_master e where e.emp_code=" & EmpCode & "").Tables(0)
-                If dt2.Rows.Count > 0 Then
-                    userCode = dt2.Rows(0)(0)
-                Else
-                    userCode = ""
-                End If
-              
-                grdApprove.DataSource = dt2
-                grdApprove.DataBind()
-                Me.cmdApprove.Attributes.Add("onClick", "return checkGridFill()")
-               
+                            tbody += `<tr class="asset-row" data-flatno="${flatNo}" data-itemno="${itemId}" data-emp="${userCode}">
+                                        <td class="text-center">${flatNo}</td>
+                                        <td>${flatName}</td>
+                                        <td>${itemName}</td>
+                                        <td class="text-center">${itemId}</td>
+                                        <td>${makeName}</td>
+                                        <td class="text-center">${totalCount}</td>
+                                        <td class="text-end">${totalPrice}</td>
+                                        <td class="text-center">${enterDate}</td>
+                                        <td class="text-center">${userCode}</td>
+                                        <td class="text-center">
+                                            <select class="form-select form-select-sm ddl-working">
+                                                <option value="0">SELECT</option>
+                                                <option value="1">YES</option>
+                                                <option value="2">NO</option>
+                                            </select>
+                                        </td>
+                                        <td class="text-center">
+                                            <select class="form-select form-select-sm ddl-available">
+                                                <option value="0">SELECT</option>
+                                                <option value="1">YES</option>
+                                                <option value="2">NO</option>
+                                            </select>
+                                        </td>
+                                      </tr>`;
+                        });
+                        $('#grdApproveBody').html(tbody);
+                    } else {
+                        Swal.fire({
+                            title: 'No Data',
+                            text: 'No data found for this selection.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            btn_Exit_Click();
+                        });
+                    }
+                },
+                error: function () {
+                    $('#grdApproveBody').html(`<tr><td colspan="11" class="text-center text-danger py-4">Failed to load data from server.</td></tr>`);
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
 
-            End If
+        function checkGridFill() {
+            var isValid = true;
+            $('.asset-row').each(function () {
+                var workVal = $(this).find('.ddl-working').val();
+                var avaiVal = $(this).find('.ddl-available').val();
+                
+                if (workVal === "0" || avaiVal === "0") {
+                    isValid = false;
+                    return false; // Break loop
+                }
+            });
+            return isValid;
+        }
 
-        End If
+        function btn_Confirm_Click() {
+            if ($('.asset-row').length === 0) {
+                Swal.fire("Warning", "No records to confirm.", "warning");
+                return;
+            }
 
+            // Legacy check
+            if (!checkGridFill()) {
+                Swal.fire("Warning", "Choose file (Please select Working/Available for all rows).", "warning");
+                return;
+            }
 
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Are you sure to approve the selected records...",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    processSave();
+                }
+            });
+        }
 
-    End Sub
-    Public Sub checkAll(ByVal value)
+        function processSave() {
+            var outputString = "";
+            var extractedUsrId = usr_id.split('!')[0]; // Matches logic in legacy code: usr_id(0)
 
-    End Sub
+            $('.asset-row').each(function () {
+                var fno = $(this).data("flatno");
+                var ino = $(this).data("itemno");
+                var emp = $(this).data("emp");
+                
+                var work = $(this).find('.ddl-working').val();
+                var avai = $(this).find('.ddl-available').val();
 
-    Protected Sub cmdApprove_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles cmdApprove.Click
-        Dim pr(1) As OracleParameter
-        Dim usr_id
-        usr_id = Session("user_id").ToString.Split("!")
-        Dim i As Integer
-        Dim data As String = userid & "^"
-        For i = 0 To grdApprove.Rows.Count - 1
-            Dim fno As String = Me.grdApprove.Rows(i).Cells(0).Text
-            Dim fname As String = Me.grdApprove.Rows(i).Cells(1).Text
-            Dim iname As String = Me.grdApprove.Rows(i).Cells(2).Text
-            Dim ino As String = Me.grdApprove.Rows(i).Cells(3).Text
-            Dim mname As String = Me.grdApprove.Rows(i).Cells(4).Text
-            Dim count As String = Me.grdApprove.Rows(i).Cells(5).Text
-            Dim price As String = Me.grdApprove.Rows(i).Cells(6).Text
-            Dim edate As String = Me.grdApprove.Rows(i).Cells(7).Text
-            Dim EMP As String = Me.grdApprove.Rows(i).Cells(8).Text
-            Dim work As String = Me.grdApprove.Rows(i).Cells(9).Text
-            Dim avai As String = Me.grdApprove.Rows(i).Cells(10).Text
+                // Format: fno~ino~work~avai~EMP~usr_id(0)!
+                outputString += fno + "~" + ino + "~" + work + "~" + avai + "~" + emp + "~" + extractedUsrId + "!";
+            });
 
+            Swal.fire({ title: "Updating...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
+            // Ensure you use '$' if '~' causes array shifting collisions in your PL/SQL splitstr
+            var safeOutput = outputString.replace(/~/g, '$');
+            var reqData = "HOSTEL_VERIFY_SAVE_ASSET_STATUS$" + safeOutput + "^1";
 
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var status = data[0].STATUS || data[0].status;
+                        var msg = data[0].RES || data[0].res || "Data updated .....";
+                        
+                        Swal.fire("Success", msg, "success").then(() => {
+                            window.close(); // Legacy behavior closed the popup window on success
+                        });
+                    } else {
+                        Swal.fire("Error", "Failed to update records.", "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
 
-            work = DirectCast(grdApprove.Rows(i).FindControl("ddlworking"), DropDownList).SelectedValue
-
-            avai = DirectCast(grdApprove.Rows(i).FindControl("ddlavailable"), DropDownList).SelectedValue
-
-            output += fno & "~" & ino & "~" & work & "~" & avai & "~" & EMP & "~" & usr_id(0) & "!"
-            flag = "WORK"
-        Next
-
-
-        ' Dim message As String = ""
-
-        pr(0) = New OracleParameter("input_string", OracleType.VarChar, 5000)
-        pr(0).Value = output
-        pr(0).Direction = ParameterDirection.Input
-
-        pr(1) = New OracleParameter("P_flag", OracleType.VarChar, 20)
-        pr(1).Value = flag
-        pr(1).Direction = ParameterDirection.Input
-
-   
-        OH.ExecuteNonQuery("PROC_HOSTEL_ASSETS", pr)
-        Dim cl_script0 As New System.Text.StringBuilder
-        cl_script0.Append("alert('Data updated .....');")
-        Response.Write("<script language='javascript'> { window.close(); }</script>")
-        'cl_script0.Append("window.open('../Hostel/amahverification.aspx','_self');")
-        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
-    End Sub
-   
-    
-   
-    Protected Sub cmdexit_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles cmdexit.Click
-        Dim cl_script0 As New System.Text.StringBuilder
-
-        Server.Transfer("amahverification.aspx")
-
-        Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "clientscript", cl_script0.ToString, True)
-    End Sub
-End Class
+        function btn_Exit_Click() {
+            // If opened as a popup, close it. Otherwise, go back to main verification page.
+            if (window.opener && !window.opener.closed) {
+                window.close();
+            } else {
+                var redirectUrl = window.location.hostname === "localhost"
+                    ? `/Others/amahverification`
+                    : `/${root}/Others/amahverification`.replace(/\/+/g, "/");
+                window.location.href = redirectUrl;
+            }
+        }
+    </script>
+</body>
+</html>
