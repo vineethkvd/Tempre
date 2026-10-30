@@ -1,4 +1,3 @@
-
 @{
     ViewData["Title"] = "amahverification";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -382,7 +381,6 @@
                 var arr1 = arr[j].split("~");
                 var empcode = arr1[2];
 
-                // Added unique prefixes "exist_" to IDs to prevent conflicts with the insert table
                 tab += `<tr>
                             <td class='text-start'>${arr1[1]}</td>
                             <td class='text-center'>${arr1[0]}</td>
@@ -393,7 +391,7 @@
                                 <input id='exist_ys_${j}' type='radio' name='ExistYesNo_${j}' value='1' onClick='Verfyfxed(${j}, ${arr1[2]}, 1)' /> <label for='exist_ys_${j}' class='me-2'>Yes</label>
                                 <input id='exist_no_${j}' type='radio' name='ExistYesNo_${j}' value='0' onClick='Verfyfxed(${j}, ${arr1[2]}, 0)' /> <label for='exist_no_${j}'>No</label>
                             </td>
-                            <td class='text-center'><a href="javascript:void(0)" onclick="viewf(${empcode})" class="text-primary fw-bold text-decoration-none">View</a></td>
+                            <td class='text-center'><a href="javascript:void(0)" onclick="viewf(${empcode})" class="text-primary fw-bold text-decoration-none" style="cursor: pointer;">View</a></td>
                             <td class='text-center'><a href="javascript:void(0)" onclick="delf(${j})" class="text-danger fw-bold text-decoration-none">Delete</a></td>
                             <td class='text-center'><input id='chk_remove_${j}' type='checkbox' class='form-check-input' onClick='output(${j}, ${empcode})' /></td>
                         </tr>`;
@@ -410,7 +408,7 @@
             $.ajax({
                 type: "POST",
                 url: postApiUrl(),
-                data: { datas: reqData },
+                data: { datas2: reqData },
                 success: function (res) {
                     var data = typeof res === "string" ? JSON.parse(res) : res;
                     if (data && data.length > 0) {
@@ -482,7 +480,6 @@
             for (var n = 0; n < row.length - 1; n++) {
                 var col = row[n].split("~");
 
-                // Added unique prefixes "new_" to IDs to prevent conflicts with the existing table
                 tab += `<tr>
                             <td class='text-center'>${col[0]}</td>
                             <td class='text-start'>${col[1]}</td>
@@ -501,6 +498,14 @@
         }
 
         function Verfyfxed(hkm, h, p) {
+            // Reintegrate the window opening behavior for asset verification[span_0](start_span)[span_0](end_span)
+            if (p == 1 || p == '1') {
+                var redirectUrl = window.location.hostname === "localhost"
+                    ? `/Others/work_or_not?empcode=${h}&Choice=2`
+                    : `/${root}/Others/work_or_not?empcode=${h}&Choice=2`.replace(/\/+/g, "/");
+                window.open(redirectUrl, '_blank');
+            }
+
             var data = "";
             var rows = $('#hdnDisplay').val().split("!");
             for (var k = 0; k < rows.length - 1; k++) {
@@ -522,13 +527,23 @@
             $('#hdnFxd').val($('#hdnFxd').val() + data);
         }
 
-        function viewf(h) {
-            Swal.fire("Info", "Asset View triggered for Emp: " + h, "info");
+        // Reintegrate the old viewf logic properly[span_1](start_span)[span_1](end_span)
+        function viewf(empcode) {
+            if (!empcode) {
+                Swal.fire("Warning", "Employee Code is missing.", "warning");
+                return;
+            }
+            
+            var url = window.location.hostname === "localhost"
+                ? `/Others/Rpt_hostelItem_individual?empcode=${empcode}&Choice=2`
+                : `/${root}/Others/Rpt_hostelItem_individual?empcode=${empcode}&Choice=2`.replace(/\/+/g, "/");
+            
+            // Replicates the old '_self' target behavior shown in the legacy VB code[span_2](start_span)[span_2](end_span)
+            window.open(url, '_self');
         }
 
         function output(hkm, h) {
             var currentList = $('#Hidd_removeCustList').val();
-            // Referencing the newly named unique checkbox ID
             if ($('#chk_remove_' + hkm).is(':checked')) {
                 $('#Hidd_removeCustList').val(currentList + h + "!");
             } else {
