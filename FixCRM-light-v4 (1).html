@@ -1,1 +1,1581 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using AccountsEntryProperties.CashTransferProperties;
+using AccountsEntryProperties;
+namespace AccountsEntry.Branch_Master
+{
+    public partial class Account_Mapping : Form
+    {
+        TransactionService.AccountTransactionServicesClient serviceObj = new TransactionService.AccountTransactionServicesClient();
+        BranchMasterProperties objBranchMasterProperties = new BranchMasterProperties();
+        List<BranchMasterProperties> objAccountList = new List<BranchMasterProperties>();
+
+        public Account_Mapping()
+        {
+            InitializeComponent();
+        }
+
+        private void Account_Mapping_Load(object sender, EventArgs e)
+        {
+            cmbgp_name.Refresh();
+          //  txtacc_type.Text = string.Empty;
+            FillGroupName();
+            Fillsegment();
+            FillAcco();
+            txtacc_type.Text = string.Empty;
+            FillSub_acc();
+            fillvo_post();
+            //if (ConstantGallery.SEGMENT_ID != -1)
+            //{
+            //    cmbSegment.SelectedValue = ConstantGallery.SEGMENT_ID;
+            //    //cmbSegment.Enabled = false;
+            //}
+
+ 
+        }
+
+        private void BtnSrch_Click(object sender, EventArgs e)
+        {
+            
+            objAccountList = serviceObj.SearchAccount(TxtSrch.Text).Account_map;
+            if (objAccountList != null)
+            {
+                //string acc_no = TxtSrch.Text;
+                if (objAccountList.Count > 0)
+                {
+                   
+                    for (int i = 0; i < objAccountList.Count; i++)
+                    {
+                        //dgv_data.Rows.Add(objAccountList[i].ACCOUNT_NO,objAccountList[i].ACCOUNT_NAME);
+                        
+                    }
+                    var result1 = TxtSrch.Text.Split('|');
+                    TxtSrch.Text = result1[0];
+                    string acc_no = TxtSrch.Text;
+                    txtAccNo.Text = acc_no;
+                   //txtAcc_Name.Text =objAccountList.Find(p =>p.ACCOUNT_NO ==Convert.ToString (TxtSrch .Text )).ACCOUNT_NAME.ToString() ;
+                    txtAcc_Name.Text = objAccountList.Find(p => p.ACCOUNT_NO  == Convert.ToInt32(TxtSrch.Text)).ACCOUNT_NAME.ToString();
+                    }
+                else
+                {
+                    GlassMessage.Glass.Show("No Data Found", "Information", MessageBoxIcon.Information, MessageBoxButtons.OK);
+                }
+            }
+            else
+            {
+                GlassMessage.Glass.Show("Enter Account Number", "Information", MessageBoxIcon.Information, MessageBoxButtons.OK);
+            }
+            
+        }
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void FillGroupName()
+        {
+            cmbgp_name.DataSource = serviceObj.GetGroupName().Branches;
+            cmbgp_name.DisplayMember = "Group_Name";
+           cmbgp_name.ValueMember = "Group_Id";
+            //cmbgp_name.ValueMember = "Group_Name";
+        }
+        private void fillvo_post()
+        {
+            cmbvo_post.DataSource = serviceObj.GetVoc_Post().Vo_post;
+            cmbvo_post.DisplayMember = "Name";
+            cmbvo_post.ValueMember = "Id";
+        }
+        private void FillSub_acc()
+        {
+            cmbsub_acc.DataSource = serviceObj.GetSub_Acc().Branches;
+            cmbsub_acc.DisplayMember = "SUB_ACC";
+            cmbsub_acc.ValueMember = "Id";
+            cmbsub_acc.SelectedValue = -1;
+            cmbsub_acc.SelectedText = "-Select-";
+        }
+
+        private void Fillsegment()
+        {
+
+            objBranchMasterProperties.FIRM_ID = ConstantGallery.FIRMID;
+            cmbSegment.DataSource = serviceObj.GetAllSegmentMaster(objBranchMasterProperties).BranchMaster;
+            cmbSegment.DisplayMember = "Segment_NAME";
+            cmbSegment.ValueMember = "Segment_ID";
+        }
+
+        private void cmbgp_name_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbgp_name.SelectedIndex > 0)
+            {
+                FillAcco();
+            }
+            else
+            {
+
+            }
+           
+        }
+
+        private void FillAcco()
+        {
+            txtacc_type.Text = string.Empty;
+            var result2 = cmbgp_name.Text.Split('|');
+            txtacc_type.Text = result2[0];
+            string acc_type = cmbgp_name.Text;
+            txtacc_type.Text = acc_type;
+            acc_type = (cmbgp_name.SelectedValue).ToString();
+
+            if (Convert.ToInt32(cmbgp_name.SelectedValue)== 1)
+            {
+                txtparent_id.Text = (1000000).ToString();
+            }
+            else if (Convert.ToInt32(cmbgp_name.SelectedValue) == 2)
+            {
+                txtparent_id.Text = (2000000).ToString();
+            }
+            else if (Convert.ToInt32(cmbgp_name.SelectedValue) == 3)
+            {
+                txtparent_id.Text = (3000000).ToString();
+            }
+            else if (Convert.ToInt32(cmbgp_name.SelectedValue) == 4)
+            {
+                txtparent_id.Text = (4000000).ToString();
+            }
+            else if (Convert.ToInt32(cmbgp_name.SelectedValue) == 5)
+            {
+                txtparent_id.Text = (5000000).ToString();
+            }
+            else if (Convert.ToInt32(cmbgp_name.SelectedValue) == 6)
+            {
+                txtparent_id.Text = (6000000).ToString();
+            }
+        }
+
+
+        private void btnConfirm_Click(object sender, EventArgs e)
+        {
+            if (txtAccNo.Text.Trim() != string.Empty)
+            {
+                 if (txtAcc_Name.Text.Trim() != string.Empty)
+                    {
+                        if (cmbgp_name.SelectedValue != "-Select-")
+                        {
+                            if (cmbvo_post.SelectedValue != "-Select-")
+                            {
+                                if (cmbSegment.SelectedValue != "-Select-")
+                                {
+                                    Account_Map_insert();
+                                }
+                                else
+                                    GlassMessage.Glass.Show("Select Segment", "Account Mapping", MessageBoxIcon.Information);
+                            }
+                            else
+                                GlassMessage.Glass.Show("Select Voucher post", "Account Mapping", MessageBoxIcon.Information);
+                        }
+                        else
+                            GlassMessage.Glass.Show("Select Group ,To fill ParentId and Account Type", "Account Mapping", MessageBoxIcon.Information);
+                    }
+                    else
+                        GlassMessage.Glass.Show("Enter Account Name", "Account Mapping", MessageBoxIcon.Information);
+                  }
+            else
+                GlassMessage.Glass.Show("Enter Account Number", "Account Mapping", MessageBoxIcon.Information);
+          }
+
+        private void Account_Map_insert()
+        {
+            try
+            {
+               
+                objBranchMasterProperties.ACCOUNT_NAME = Convert.ToString(this.txtAcc_Name.Text);
+                objBranchMasterProperties.Id = Convert.ToInt32(this.txtparent_id.Text);
+                objBranchMasterProperties.finAcc = Convert.ToInt32(this.txtfinAcc.Text);
+                objBranchMasterProperties.VOUCHER_POST =Convert.ToString(cmbvo_post.Text) ;
+                objBranchMasterProperties.Group_Name = Convert.ToString(this.txtacc_type.Text);
+                objBranchMasterProperties.Group_Id = Convert.ToInt32(cmbgp_name.SelectedIndex);
+                objBranchMasterProperties.ACCOUNT_NO = Convert.ToInt32(this.txtAccNo.Text);
+                objBranchMasterProperties.SUB_ACC = Convert.ToInt32(cmbsub_acc.SelectedValue);
+                objBranchMasterProperties.Segment_NAME = Convert.ToString(cmbSegment.SelectedIndex);
+                        
+              OperationResult Result = serviceObj. InsertAccount_map (objBranchMasterProperties);
+                if (Result.Status == true)
+                {
+                    GlassMessage.Glass.Show("Added Successfully", "Account Mapping", MessageBoxIcon.Information, MessageBoxButtons.OK);
+                    TxtSrch.Text = string.Empty;
+                    txtAccNo.Text = string.Empty;
+                    cmbsub_acc.SelectedIndex = 0;
+                    txtAcc_Name.Text = string.Empty;
+                    cmbgp_name.SelectedIndex = 0;
+                    txtparent_id.Text = string.Empty;
+                    txtacc_type.Text = string.Empty;
+                    cmbvo_post.SelectedIndex = 0;
+                    cmbSegment.SelectedIndex = 0;
+                   // cmbsub_acc.SelectedIndex =Convert.ToInt32 ( "----Select------");
+
+                }
+                else if (Result.Status == false)
+                {
+                    GlassMessage.Glass.Show("FinAccount Number Already Exists", "Account Mapping", MessageBoxIcon.Information, MessageBoxButtons.OK);
+                    TxtSrch.Text = string.Empty;
+                    txtAccNo.Text = string.Empty;
+                    txtfinAcc.Text = string.Empty;
+                    cmbsub_acc.Text = "-Select-";
+                    txtAcc_Name.Text = string.Empty;
+                    cmbgp_name.SelectedIndex = 0;
+                    txtparent_id.Text = string.Empty;
+                    txtacc_type.Text = string.Empty;
+                    cmbvo_post.SelectedIndex = 0;
+                    cmbSegment.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+              GlassMessage.Glass.Show(ex.ToString(), " Account Mapping ", MessageBoxIcon.Information, MessageBoxButtons.OK);
+                
+            }
+
+
+        }
+
+        private void cmbsub_acc_SelectedIndexChanged(object sender, EventArgs e)
+        {
+           
+        }
+
+        private void cmbvo_post_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            //if (cmbvo_post.SelectedIndex > 0)
+            //{
+            //    fillvo_post();
+            //}
+        }
+
+        private void cmbSegment_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+
+
+       
+       
+
+
+
+
+
+
+    }
+}
+namespace AccountsEntry.Branch_Master
+{
+    partial class Account_Mapping
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.pnl_apphead = new System.Windows.Forms.Panel();
+            this.lbl_heading = new System.Windows.Forms.Label();
+            this.panel2 = new System.Windows.Forms.Panel();
+            this.btnExit = new System.Windows.Forms.Button();
+            this.btnConfirm = new System.Windows.Forms.Button();
+            this.gb_gstvendor = new System.Windows.Forms.GroupBox();
+            this.TxtSrch = new System.Windows.Forms.TextBox();
+            this.Label23 = new System.Windows.Forms.Label();
+            this.BtnSrch = new System.Windows.Forms.Button();
+            this.txtAccNo = new System.Windows.Forms.TextBox();
+            this.lblac = new System.Windows.Forms.Label();
+            this.lblSub_acc = new System.Windows.Forms.Label();
+            this.lblacc_name = new System.Windows.Forms.Label();
+            this.txtAcc_Name = new System.Windows.Forms.TextBox();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.cmbvo_post = new System.Windows.Forms.ComboBox();
+            this.cmbsub_acc = new System.Windows.Forms.ComboBox();
+            this.lblSelectsegment = new System.Windows.Forms.Label();
+            this.cmbSegment = new System.Windows.Forms.ComboBox();
+            this.lblVo_posting = new System.Windows.Forms.Label();
+            this.txtacc_type = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.lblAC_type = new System.Windows.Forms.Label();
+            this.cmbgp_name = new System.Windows.Forms.ComboBox();
+            this.txtparent_id = new System.Windows.Forms.TextBox();
+            this.lblpar_id = new System.Windows.Forms.Label();
+            this.pnl_apphead.SuspendLayout();
+            this.gb_gstvendor.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            this.SuspendLayout();
+            // 
+            // pnl_apphead
+            // 
+            this.pnl_apphead.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(182)))), ((int)(((byte)(182)))), ((int)(((byte)(182)))));
+            this.pnl_apphead.Controls.Add(this.lbl_heading);
+            this.pnl_apphead.Dock = System.Windows.Forms.DockStyle.Top;
+            this.pnl_apphead.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.pnl_apphead.Location = new System.Drawing.Point(0, 0);
+            this.pnl_apphead.Name = "pnl_apphead";
+            this.pnl_apphead.Size = new System.Drawing.Size(1035, 35);
+            this.pnl_apphead.TabIndex = 204;
+            // 
+            // lbl_heading
+            // 
+            this.lbl_heading.AutoSize = true;
+            this.lbl_heading.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_heading.ForeColor = System.Drawing.Color.Black;
+            this.lbl_heading.Location = new System.Drawing.Point(466, 9);
+            this.lbl_heading.Name = "lbl_heading";
+            this.lbl_heading.Size = new System.Drawing.Size(141, 21);
+            this.lbl_heading.TabIndex = 1;
+            this.lbl_heading.Text = "Account Mapping";
+            // 
+            // panel2
+            // 
+            this.panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(182)))), ((int)(((byte)(182)))), ((int)(((byte)(182)))));
+            this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.panel2.Location = new System.Drawing.Point(0, 745);
+            this.panel2.Name = "panel2";
+            this.panel2.Size = new System.Drawing.Size(1035, 35);
+            this.panel2.TabIndex = 216;
+            // 
+            // btnExit
+            // 
+            this.btnExit.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnExit.Location = new System.Drawing.Point(645, 326);
+            this.btnExit.Name = "btnExit";
+            this.btnExit.Size = new System.Drawing.Size(79, 29);
+            this.btnExit.TabIndex = 9;
+            this.btnExit.Text = "Exit";
+            this.btnExit.UseVisualStyleBackColor = true;
+            this.btnExit.Click += new System.EventHandler(this.btnExit_Click);
+            // 
+            // btnConfirm
+            // 
+            this.btnConfirm.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnConfirm.Location = new System.Drawing.Point(551, 326);
+            this.btnConfirm.Name = "btnConfirm";
+            this.btnConfirm.Size = new System.Drawing.Size(79, 29);
+            this.btnConfirm.TabIndex = 8;
+            this.btnConfirm.Text = "Confirm";
+            this.btnConfirm.UseVisualStyleBackColor = true;
+            this.btnConfirm.Click += new System.EventHandler(this.btnConfirm_Click);
+            // 
+            // gb_gstvendor
+            // 
+            this.gb_gstvendor.Controls.Add(this.TxtSrch);
+            this.gb_gstvendor.Controls.Add(this.Label23);
+            this.gb_gstvendor.Controls.Add(this.BtnSrch);
+            this.gb_gstvendor.Location = new System.Drawing.Point(35, 39);
+            this.gb_gstvendor.Name = "gb_gstvendor";
+            this.gb_gstvendor.Size = new System.Drawing.Size(908, 55);
+            this.gb_gstvendor.TabIndex = 217;
+            this.gb_gstvendor.TabStop = false;
+            // 
+            // TxtSrch
+            // 
+            this.TxtSrch.BackColor = System.Drawing.Color.White;
+            this.TxtSrch.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
+            this.TxtSrch.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.TxtSrch.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(68)))), ((int)(((byte)(68)))), ((int)(((byte)(68)))));
+            this.TxtSrch.Location = new System.Drawing.Point(153, 13);
+            this.TxtSrch.Name = "TxtSrch";
+            this.TxtSrch.Size = new System.Drawing.Size(616, 23);
+            this.TxtSrch.TabIndex = 1;
+            // 
+            // Label23
+            // 
+            this.Label23.AutoSize = true;
+            this.Label23.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(241)))), ((int)(((byte)(241)))), ((int)(((byte)(241)))));
+            this.Label23.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.Label23.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.Label23.Location = new System.Drawing.Point(6, 16);
+            this.Label23.Name = "Label23";
+            this.Label23.Size = new System.Drawing.Size(137, 15);
+            this.Label23.TabIndex = 416;
+            this.Label23.Text = "Search Account Number";
+            // 
+            // BtnSrch
+            // 
+            this.BtnSrch.BackColor = System.Drawing.Color.Transparent;
+            this.BtnSrch.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(187)))), ((int)(((byte)(204)))), ((int)(((byte)(216)))));
+            this.BtnSrch.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(188)))), ((int)(((byte)(212)))), ((int)(((byte)(230)))));
+            this.BtnSrch.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.BtnSrch.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(68)))), ((int)(((byte)(68)))), ((int)(((byte)(68)))));
+            this.BtnSrch.Location = new System.Drawing.Point(784, 13);
+            this.BtnSrch.Name = "BtnSrch";
+            this.BtnSrch.Size = new System.Drawing.Size(75, 23);
+            this.BtnSrch.TabIndex = 2;
+            this.BtnSrch.Text = "Search";
+            this.BtnSrch.UseVisualStyleBackColor = true;
+            this.BtnSrch.Click += new System.EventHandler(this.BtnSrch_Click);
+            // 
+            // txtAccNo
+            // 
+            this.txtAccNo.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtAccNo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtAccNo.Location = new System.Drawing.Point(188, 112);
+            this.txtAccNo.MaxLength = 50;
+            this.txtAccNo.Name = "txtAccNo";
+            this.txtAccNo.ReadOnly = true;
+            this.txtAccNo.Size = new System.Drawing.Size(235, 23);
+            this.txtAccNo.TabIndex = 0;
+            // 
+            // lblac
+            // 
+            this.lblac.AutoSize = true;
+            this.lblac.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblac.Location = new System.Drawing.Point(49, 120);
+            this.lblac.Name = "lblac";
+            this.lblac.Size = new System.Drawing.Size(99, 15);
+            this.lblac.TabIndex = 221;
+            this.lblac.Text = "Account Number";
+            // 
+            // lblSub_acc
+            // 
+            this.lblSub_acc.AutoSize = true;
+            this.lblSub_acc.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSub_acc.Location = new System.Drawing.Point(498, 117);
+            this.lblSub_acc.Name = "lblSub_acc";
+            this.lblSub_acc.Size = new System.Drawing.Size(124, 15);
+            this.lblSub_acc.TabIndex = 230;
+            this.lblSub_acc.Text = "Sub_Account Number";
+            // 
+            // lblacc_name
+            // 
+            this.lblacc_name.AutoSize = true;
+            this.lblacc_name.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblacc_name.Location = new System.Drawing.Point(63, 155);
+            this.lblacc_name.Name = "lblacc_name";
+            this.lblacc_name.Size = new System.Drawing.Size(87, 15);
+            this.lblacc_name.TabIndex = 231;
+            this.lblacc_name.Text = "Account Name";
+            // 
+            // txtAcc_Name
+            // 
+            this.txtAcc_Name.BackColor = System.Drawing.Color.White;
+            this.txtAcc_Name.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
+            this.txtAcc_Name.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtAcc_Name.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(68)))), ((int)(((byte)(68)))), ((int)(((byte)(68)))));
+            this.txtAcc_Name.Location = new System.Drawing.Point(188, 147);
+            this.txtAcc_Name.Name = "txtAcc_Name";
+            this.txtAcc_Name.Size = new System.Drawing.Size(692, 23);
+            this.txtAcc_Name.TabIndex = 4;
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.cmbvo_post);
+            this.groupBox2.Controls.Add(this.cmbsub_acc);
+            this.groupBox2.Controls.Add(this.lblSelectsegment);
+            this.groupBox2.Controls.Add(this.cmbSegment);
+            this.groupBox2.Controls.Add(this.lblVo_posting);
+            this.groupBox2.Controls.Add(this.txtacc_type);
+            this.groupBox2.Controls.Add(this.label1);
+            this.groupBox2.Controls.Add(this.lblAC_type);
+            this.groupBox2.Controls.Add(this.cmbgp_name);
+            this.groupBox2.Controls.Add(this.txtparent_id);
+            this.groupBox2.Controls.Add(this.lblpar_id);
+            this.groupBox2.Location = new System.Drawing.Point(35, 100);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(908, 178);
+            this.groupBox2.TabIndex = 419;
+            this.groupBox2.TabStop = false;
+            // 
+            // cmbvo_post
+            // 
+            this.cmbvo_post.FormattingEnabled = true;
+            this.cmbvo_post.Location = new System.Drawing.Point(153, 115);
+            this.cmbvo_post.Name = "cmbvo_post";
+            this.cmbvo_post.Size = new System.Drawing.Size(56, 21);
+            this.cmbvo_post.TabIndex = 6;
+            this.cmbvo_post.SelectedIndexChanged += new System.EventHandler(this.cmbvo_post_SelectedIndexChanged);
+            // 
+            // cmbsub_acc
+            // 
+            this.cmbsub_acc.FormattingEnabled = true;
+            this.cmbsub_acc.Location = new System.Drawing.Point(632, 11);
+            this.cmbsub_acc.Name = "cmbsub_acc";
+            this.cmbsub_acc.Size = new System.Drawing.Size(235, 21);
+            this.cmbsub_acc.TabIndex = 3;
+            this.cmbsub_acc.SelectedIndexChanged += new System.EventHandler(this.cmbsub_acc_SelectedIndexChanged);
+            // 
+            // lblSelectsegment
+            // 
+            this.lblSelectsegment.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblSelectsegment.Location = new System.Drawing.Point(342, 114);
+            this.lblSelectsegment.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.lblSelectsegment.Name = "lblSelectsegment";
+            this.lblSelectsegment.Size = new System.Drawing.Size(116, 21);
+            this.lblSelectsegment.TabIndex = 422;
+            this.lblSelectsegment.Text = "Segment";
+            this.lblSelectsegment.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblSelectsegment.UseCompatibleTextRendering = true;
+            // 
+            // cmbSegment
+            // 
+            this.cmbSegment.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.cmbSegment.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cmbSegment.FormattingEnabled = true;
+            this.cmbSegment.Location = new System.Drawing.Point(466, 114);
+            this.cmbSegment.Name = "cmbSegment";
+            this.cmbSegment.Size = new System.Drawing.Size(132, 21);
+            this.cmbSegment.TabIndex = 7;
+            this.cmbSegment.SelectedIndexChanged += new System.EventHandler(this.cmbSegment_SelectedIndexChanged);
+            // 
+            // lblVo_posting
+            // 
+            this.lblVo_posting.AutoSize = true;
+            this.lblVo_posting.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblVo_posting.Location = new System.Drawing.Point(16, 121);
+            this.lblVo_posting.Name = "lblVo_posting";
+            this.lblVo_posting.Size = new System.Drawing.Size(94, 15);
+            this.lblVo_posting.TabIndex = 420;
+            this.lblVo_posting.Text = "Voucher Posting";
+            // 
+            // txtacc_type
+            // 
+            this.txtacc_type.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtacc_type.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtacc_type.Location = new System.Drawing.Point(707, 86);
+            this.txtacc_type.MaxLength = 50;
+            this.txtacc_type.Name = "txtacc_type";
+            this.txtacc_type.ReadOnly = true;
+            this.txtacc_type.Size = new System.Drawing.Size(160, 23);
+            this.txtacc_type.TabIndex = 0;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(45, 86);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(75, 15);
+            this.label1.TabIndex = 228;
+            this.label1.Text = "Group Name";
+            // 
+            // lblAC_type
+            // 
+            this.lblAC_type.AutoSize = true;
+            this.lblAC_type.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblAC_type.Location = new System.Drawing.Point(607, 90);
+            this.lblAC_type.Name = "lblAC_type";
+            this.lblAC_type.Size = new System.Drawing.Size(81, 15);
+            this.lblAC_type.TabIndex = 232;
+            this.lblAC_type.Text = "Account Type";
+            // 
+            // cmbgp_name
+            // 
+            this.cmbgp_name.FormattingEnabled = true;
+            this.cmbgp_name.Location = new System.Drawing.Point(153, 82);
+            this.cmbgp_name.Name = "cmbgp_name";
+            this.cmbgp_name.Size = new System.Drawing.Size(235, 21);
+            this.cmbgp_name.TabIndex = 5;
+            this.cmbgp_name.SelectedIndexChanged += new System.EventHandler(this.cmbgp_name_SelectedIndexChanged);
+            // 
+            // txtparent_id
+            // 
+            this.txtparent_id.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtparent_id.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
+            this.txtparent_id.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtparent_id.Location = new System.Drawing.Point(466, 82);
+            this.txtparent_id.MaxLength = 50;
+            this.txtparent_id.Name = "txtparent_id";
+            this.txtparent_id.ReadOnly = true;
+            this.txtparent_id.Size = new System.Drawing.Size(132, 23);
+            this.txtparent_id.TabIndex = 0;
+            // 
+            // lblpar_id
+            // 
+            this.lblpar_id.AutoSize = true;
+            this.lblpar_id.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblpar_id.Location = new System.Drawing.Point(399, 88);
+            this.lblpar_id.Name = "lblpar_id";
+            this.lblpar_id.Size = new System.Drawing.Size(51, 15);
+            this.lblpar_id.TabIndex = 230;
+            this.lblpar_id.Text = "ParentId";
+            // 
+            // Account_Mapping
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(1035, 780);
+            this.Controls.Add(this.txtAcc_Name);
+            this.Controls.Add(this.lblacc_name);
+            this.Controls.Add(this.lblSub_acc);
+            this.Controls.Add(this.txtAccNo);
+            this.Controls.Add(this.lblac);
+            this.Controls.Add(this.gb_gstvendor);
+            this.Controls.Add(this.btnExit);
+            this.Controls.Add(this.btnConfirm);
+            this.Controls.Add(this.panel2);
+            this.Controls.Add(this.pnl_apphead);
+            this.Controls.Add(this.groupBox2);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Name = "Account_Mapping";
+            this.Text = "Account_Mapping";
+            this.Load += new System.EventHandler(this.Account_Mapping_Load);
+            this.pnl_apphead.ResumeLayout(false);
+            this.pnl_apphead.PerformLayout();
+            this.gb_gstvendor.ResumeLayout(false);
+            this.gb_gstvendor.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
+        }
+
+        #endregion
+
+        internal System.Windows.Forms.Panel pnl_apphead;
+        internal System.Windows.Forms.Label lbl_heading;
+        private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.Button btnExit;
+        private System.Windows.Forms.Button btnConfirm;
+        private System.Windows.Forms.GroupBox gb_gstvendor;
+        internal System.Windows.Forms.TextBox TxtSrch;
+        internal System.Windows.Forms.Label Label23;
+        internal System.Windows.Forms.Button BtnSrch;
+        private System.Windows.Forms.TextBox txtAccNo;
+        private System.Windows.Forms.TextBox txtfinAcc;
+        private System.Windows.Forms.Label lblac;
+        private System.Windows.Forms.Label lblSub_acc;
+        private System.Windows.Forms.Label lblacc_name;
+        internal System.Windows.Forms.TextBox txtAcc_Name;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.TextBox txtacc_type;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label lblAC_type;
+        private System.Windows.Forms.ComboBox cmbgp_name;
+        private System.Windows.Forms.TextBox txtparent_id;
+        private System.Windows.Forms.Label lblpar_id;
+        private System.Windows.Forms.Label lblVo_posting;
+        internal System.Windows.Forms.Label lblSelectsegment;
+        private System.Windows.Forms.ComboBox cmbSegment;
+        private System.Windows.Forms.ComboBox cmbsub_acc;
+        private System.Windows.Forms.ComboBox cmbvo_post;
+    }
+}
+                      using AccountsEntryProperties.CashTransferProperties;
+using DataAccessLayer;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Text;
+using AccountsEntryProperties;
+using AccountsEntryProperties.AccountTransactionProperties;
+using AccountsEntryBLL.AccountEntryManager;
+using System.Data.Common;
+
+namespace AccountsEntryBLL.Branching
+{
+    public class Branch_Mapping
+    {
+        DbConnectionHandler dbobj = new DbConnectionHandler();
+        public BranchMasterProperties objBranchMasterProperties = new BranchMasterProperties();
+        private string VALUE;
+        private int branch_id;
+        private double batchid;
+        private string branch_name;
+        private string _BrNAME;
+        private int Id;
+        private string Name;
+        private string _SEARCH;
+        private int glid;
+        private int L4=0000;
+        BranchMasterProperties _branch = new BranchMasterProperties();
+        public tdsProperties tdsProp = new tdsProperties();
+        //public string getBranchname_1(BranchMasterProperties objBranchMasterProperties)
+        //{
+
+        //    DataTable dt = new DataTable();
+        //    string str = "";
+           
+        // // dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME from branch_master b");
+
+        //  string branchname = dbobj.ExecuteScalar("SELECT b.BRANCH_NAME from branch_master b", null, CommandType.Text, true).ToString();
+        //  branchname = dt.ToString();
+        //    if (dt.Rows.Count > 0)
+        //    {
+        //        str = dt.Rows[0][0].ToString();
+        //    }
+        //    return str;
+        //}
+        public string Br_Name
+        {
+            get
+            {
+                return objBranchMasterProperties.BRANCH_NAME;
+            }
+            set
+            {
+               BRANCH_NAME = value;
+
+            }
+
+        }
+        public int br_id
+        {
+            get
+            {
+                return objBranchMasterProperties.BRANCH_ID;
+            }
+            set
+            {
+                br_id = value;
+
+            }
+
+        }
+        public TranscationTempProperties _TemTransactionEntry = new TranscationTempProperties();
+        TransactionManager manageTransaction = new TransactionManager();
+        public BranchMasterProperties brMaster = new BranchMasterProperties();
+
+        //public List<BranchMasterProperties> GetBranchDDL()
+        //{
+        //    DataTable dt;
+        //    if (brMaster.flag == 0)
+        //    {
+        //        dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id,BRANCH_ABBR,BRANCH_ADDR,PHONE1,FIRM_ID,DISTRICT_ID,STATE_ID,TRA_DT from branch_master b order by branch_id", null, CommandType.Text, true);
+        //    }
+        //    else
+        //    {
+        //        dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id,BRANCH_ABBR,BRANCH_ADDR,PHONE1,FIRM_ID,DISTRICT_ID,STATE_ID,TRA_DT from branch_master b order by branch_id", null, CommandType.Text, true);
+        //    }
+        //    List<BranchMasterProperties> profile = new List<BranchMasterProperties>();
+        //    if (dt.Rows.Count > 0)
+        //    {
+
+        //        for (int i = 0; i < dt.Rows.Count; i++)
+        //        {
+        //            DataRow dRow = dt.Rows[i];
+        //            profile.Add(new BranchMasterProperties
+        //            {
+        //                BRANCH_ID = Convert.ToInt32(dRow["branch_id"]),
+        //                BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+        //                BRANCH_ABBR = Convert.ToString(dRow["BRANCH_ABBR"]),
+        //                BRANCH_ADDRESS = Convert.ToString(dRow["BRANCH_ADDR"]),
+        //                MOBILE = Convert.ToInt64(dRow["PHONE1"]),
+        //                FIRM_ID = Convert.ToInt32(dRow["FIRM_ID"]),
+        //                district = Convert.ToString(dRow["DISTRICT_ID"]),
+        //                state = Convert.ToString(dRow["STATE_ID"]),
+        //                tra_date = Convert.ToDateTime(dRow["TRA_DT"])
+        //            });
+
+        //        }
+
+        //        return profile;
+        //    }
+        //    else
+        //    {
+        //        profile.Insert(0, new BranchMasterProperties
+        //        {
+        //            BRANCH_NAME = "-SELECT-",
+        //            BRANCH_ID = -1
+        //        });
+
+        //        return profile;
+        //    }
+
+        //}
+
+
+        public List<BranchMasterProperties> GetBranchDDL(BranchMasterProperties entry)
+        {
+            DataTable dt = new DataTable();
+            List<BranchMasterProperties> profile = new List<BranchMasterProperties>();
+
+
+
+            string str = "SELECT a.BRANCH_ID,b.BRANCH_NAME,b.BRANCH_ABBR,b.BRANCH_ADDR,b.PHONE1,b.FIRM_ID,b.DISTRICT_ID,b.STATE_ID ,b.STATUS_ID from active_firms a inner join branch_master b on a.BRANCH_ID=b.BRANCH_ID  where a.FIRM_ID='" + entry.FIRM_ID + "' order by BRANCH_NAME";
+            dt = dbobj.GetDataTable("SELECT a.BRANCH_ID,b.BRANCH_NAME,b.BRANCH_ABBR,b.BRANCH_ADDR,b.PHONE1,b.FIRM_ID,b.DISTRICT_ID,b.STATE_ID ,b.STATUS_ID from active_firms a inner join branch_master b on a.BRANCH_ID=b.BRANCH_ID  where a.FIRM_ID='" + entry.FIRM_ID + "' order by BRANCH_NAME");
+            // dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id from branch_master b order by branch_id" );
+          //dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id,BRANCH_ABBR,BRANCH_ADDR,PHONE1,FIRM_ID,DISTRICT_ID,STATE_ID ,STATUS_ID from branch_master b where status_id=1 and firm_id='1' order by branch_id");
+            // dt = dbobj.GetDataTable("SELECT * from branch_master b order by branch_id");
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new BranchMasterProperties
+                    {
+                        BRANCH_ID = Convert.ToInt32(dRow["branch_id"]),
+                        BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+                        BRANCH_ABBR=Convert.ToString(dRow["BRANCH_ABBR"]),
+                        BRANCH_ADDRESS=Convert.ToString(dRow["BRANCH_ADDR"]),
+                        MOBILE=Convert.ToString(dRow["phone1"]),
+                       state=Convert.ToString(dRow["STATE_ID"]),
+                       district=Convert.ToString(dRow["DISTRICT_ID"]),
+                        STATUS_ID = Convert.ToInt32(dRow["STATUS_ID"])
+                    });
+
+                }
+
+                return profile;
+            }
+            else
+            {
+                profile.Insert(0, new BranchMasterProperties
+                {
+                    BRANCH_ID = -1,
+                    BRANCH_NAME = "-SELECT-"
+
+                });
+
+                return profile;
+            }
+        }
+
+
+
+        public List<BranchMasterProperties> GetBranchMap(BranchMasterProperties objBranchMasterProperties)
+        {
+            DataTable dt = new DataTable();
+            List<BranchMasterProperties> profile = new List<BranchMasterProperties>();
+            dt = dbobj.GetDataTable("SELECT * FROM branch_master WHERE firm_id='"+objBranchMasterProperties.FIRM_ID+"'and status_id= '1' and NOT EXISTS (SELECT * FROM branch_mst_nucleus  WHERE branch_master.branch_id = branch_mst_nucleus.branch_id)");
+
+                        if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new BranchMasterProperties
+                    {
+                        BRANCH_ID = Convert.ToInt32(dRow["branch_id"]),
+                        BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"])
+
+                    });
+
+                }
+
+                return profile;
+            }
+            else
+            {
+                profile.Insert(0, new BranchMasterProperties
+                {
+                    BRANCH_ID = -1,
+                    BRANCH_NAME = "-SELECT-"
+
+                });
+
+                return profile;
+            }
+        }
+
+
+
+
+
+
+
+        public List<BranchMasterProperties> GetAllBranchMasterDDL()
+        {
+            DataTable dt = new DataTable();
+            List<BranchMasterProperties> list = new List<BranchMasterProperties>();
+            string str = "SELECT a.BRANCH_ID,b.BRANCH_NAME,b.BRANCH_ABBR,b.BRANCH_ADDR,b.PHONE1,b.FIRM_ID,b.DISTRICT_ID,b.STATE_ID ,b.STATUS_ID from active_firms a inner join branch_master b on a.BRANCH_ID=b.BRANCH_ID  where a.FIRM_ID='" + objBranchMasterProperties.FIRM_ID + "'and b.STATUS_ID=1 order by BRANCH_NAME";
+            dt = dbobj.GetDataTable("SELECT a.BRANCH_ID,b.BRANCH_NAME,b.BRANCH_ABBR,b.BRANCH_ADDR,b.PHONE1,b.FIRM_ID,b.DISTRICT_ID,b.STATE_ID ,b.STATUS_ID from active_firms a inner join branch_master b on a.BRANCH_ID=b.BRANCH_ID  where a.FIRM_ID='" + objBranchMasterProperties.FIRM_ID + "'and b.STATUS_ID=1 order by BRANCH_NAME");
+
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    list.Add(new BranchMasterProperties
+                    {
+                        BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+                        BRANCH_ID = Convert.ToInt32(dRow["BRANCH_ID"]),
+                        BRANCH_ABBR = Convert.ToString(dRow["BRANCH_ABBR"]),
+                        BRANCH_ADDRESS = Convert.ToString(dRow["BRANCH_ADDR"]),
+                        MOBILE = Convert.ToString(dRow["phone1"]),
+                        state = Convert.ToString(dRow["STATE_ID"]),
+                        district = Convert.ToString(dRow["DISTRICT_ID"]),
+                        STATUS_ID = Convert.ToInt32(dRow["STATUS_ID"]),
+                        ACCOUNT_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+                        ACCOUNT_NO = Convert.ToInt32(dRow["BRANCH_ID"])
+
+
+                    });
+
+                }
+                list.Insert(0, new BranchMasterProperties
+                {
+                    BRANCH_NAME = "-SELECT-",
+                    BRANCH_ID = -1,
+
+
+
+                    ACCOUNT_NAME = "-SELECT-",
+                    ACCOUNT_NO = -1
+                });
+
+            }
+            return list;
+        }
+        public List<BranchMasterProperties> GetBranchesDetailsGBD(int BranchID)
+        {
+            DataTable dt = new DataTable();
+            List<BranchMasterProperties> br_details = new List<BranchMasterProperties>();
+            dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id,BRANCH_ABBR,BRANCH_ADDR,PHONE1,FIRM_ID,DISTRICT_ID,STATE_ID,TRA_DT from branch_master b order by branch_id");
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    br_details.Add(new BranchMasterProperties
+                    {
+                        BRANCH_ID = Convert.ToInt32(dRow["branch_id"]),
+                        BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+                        BRANCH_ABBR = Convert.ToString(dRow["BRANCH_ABBR"]),
+                        BRANCH_ADDRESS = Convert.ToString(dRow["BRANCH_ADDR"]),
+                        MOBILE = Convert.ToString(dRow["phone1"]),
+                        state = Convert.ToString(dRow["STATE_ID"]),
+                        district = Convert.ToString(dRow["DISTRICT_ID"])
+                    });
+
+                }
+
+                return br_details;
+            }
+            else
+            {
+                br_details.Insert(0, new BranchMasterProperties
+                {
+                    BRANCH_ID = -1,
+                    BRANCH_NAME = "-SELECT-"
+
+                });
+
+                return br_details;
+            }
+
+
+
+
+        }
+
+        public string getBranchname_2(BranchMasterProperties Entry)
+        {
+
+            DataTable dt = new DataTable();
+            string str = "";
+           // dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME from branch_master b");
+            string branchname = dbobj.ExecuteScalar("SELECT b.BRANCH_NAME from branch_master b", null, CommandType.Text, true).ToString();
+            if (dt.Rows.Count > 0)
+            {
+                str = dt.Rows[0][0].ToString();
+            }
+            return str;
+        }
+
+        public string InsertBranch(BranchMasterProperties objBranchMasterProperties)
+        {
+            DateTime CurrentDateTime = manageTransaction.GetDateTime(_TemTransactionEntry.BRANCH_ID);
+            DataTable dt1 = dbobj.GetDataTable("Select nvl(count(branch_name),0) from branch_master where firm_id='" + objBranchMasterProperties.FIRM_ID + "'and branch_name ='" + objBranchMasterProperties.BRANCH_NAME + "'", null, CommandType.Text, true);
+            if (dt1.Rows.Count > 0 && Convert.ToInt32(dt1.Rows[0][0]) > 0)
+            {
+
+                return "Already Exists";
+            }
+            else if (Convert.ToInt32(dt1.Rows[0][0]) == 0)
+            {
+                List<string> _CMD = new List<string>();
+
+                List<string> _cmd1 = new List<string>();
+
+                if (Convert.ToInt32(branch_id) == 0)
+                {
+                    var result1 = dbobj.ExecuteScalar("Select max(value)+1 from key_master where key_id= 50", null, CommandType.Text, true);
+
+                    branch_id = Convert.ToInt32(result1);
+                    _CMD.Add("insert into branch_master(branch_id,branch_name,branch_abbr,branch_addr,phone1,firm_id,district_id,state_id,tra_dt,status_id)values('" + branch_id + "','" + objBranchMasterProperties.BRANCH_NAME + "','" + objBranchMasterProperties.BRANCH_ABBR + "','" + objBranchMasterProperties.BRANCH_ADDRESS + "','" + objBranchMasterProperties.MOBILE + "','" + objBranchMasterProperties.FIRM_ID + "','" + objBranchMasterProperties.district + "','" + objBranchMasterProperties.state + "',to_date('" + objBranchMasterProperties.tra_date + "','MM/DD/YYYY HH:MI:SS AM'),1)");
+
+
+
+                    /*Enter*/
+
+                    _CMD.Add("insert into transid_detail select '" + objBranchMasterProperties.FIRM_ID + "', '" + branch_id + "', CASH_PAY, CASH_RECEIPT, TRANSFER_PAY, TRANSFER_RECEIPT, TRANSNO, VOUCH_ID, SUBSIDARY_PAY, SUBSIDARY_RECEIPT, CUST_ID, OTHER_CUST_ID, CASH_PAY1, CASH_RECEIPT1, S_TRANSID from TRANSID_DETAIL t where t.firm_id=-1 and t.branch_id=-1");
+
+                    _CMD.Add("insert into subsidary_master select t.firm_id,'" + branch_id + "',t.parent_acc,t.account_no,t.account_name,0 balance,t.type,t.status_id,t.sub_id from SUBSIDARY_MASTER t where  t.branch_id=0 ");
+                    UpdateBr_id();
+                }
+
+                else
+                {
+                    _CMD.Add("insert into branch_master(branch_id,branch_name,branch_abbr,branch_addr,phone1,firm_id,district_id,state_id,tra_dt,status_id)values('" + objBranchMasterProperties.BRANCH_ID + "','" + objBranchMasterProperties.BRANCH_NAME + "','" + objBranchMasterProperties.BRANCH_ABBR + "','" + objBranchMasterProperties.BRANCH_ADDRESS + "','" + objBranchMasterProperties.MOBILE + "','" + objBranchMasterProperties.FIRM_ID + "','" + objBranchMasterProperties.district + "','" + objBranchMasterProperties.state + "',to_date('" + objBranchMasterProperties.tra_date + "','MM/DD/YYYY HH:MI:SS AM'),1)");
+                    _CMD.Add("insert into transid_detail select '" + objBranchMasterProperties.FIRM_ID + "', '" + branch_id + "', CASH_PAY, CASH_RECEIPT, TRANSFER_PAY, TRANSFER_RECEIPT, TRANSNO, VOUCH_ID, SUBSIDARY_PAY, SUBSIDARY_RECEIPT, CUST_ID, OTHER_CUST_ID, CASH_PAY1, CASH_RECEIPT1, S_TRANSID from TRANSID_DETAIL t where t.firm_id=-1 and t.branch_id=-1");
+                    _CMD.Add("insert into subsidary_master select t.firm_id,'" + branch_id + "',t.parent_acc,t.account_no,t.account_name,0 balance,t.type,t.status_id,t.sub_id from SUBSIDARY_MASTER t where  t.branch_id=0 ");
+                    UpdateBr_id();
+                }
+
+                bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                _CMD.Clear();
+                if (_value == true)
+                {
+
+                    return "Success";
+
+                }
+                else
+                {
+                    _cmd1.Clear();
+                    return "Error";
+                }
+
+
+            }
+            return "Branch Added";
+
+        }
+
+
+        public string UpdateBr_id()
+        {
+            List<string> _CMD = new List<string>();
+            //string Result = "Update key_master set value='"+branch_id+"' where firm_id=1 and module_id=1 and key_id=50";
+            //return Result;
+            _CMD.Add("update  key_master set value= '" + branch_id + "'   where  module_id=1 and key_id=50");
+
+            bool _value1 = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+            if (_value1 == true)
+            {
+                _CMD.Clear();
+                return "1^Success";
+            }
+            else
+            {
+                _CMD.Clear();
+                return "0^Error";
+
+            }
+
+        }
+
+        public string InsertMapBranch(BranchMasterProperties objBranchMasterProperties)
+        {
+            string result = "";
+            DataTable dt6 = dbobj.GetDataTable("Select (count(branchid)) from branch_mst_nucleus where branchid='" + objBranchMasterProperties.BRANCHID + "'", null, CommandType.Text, true);
+            if (dt6.Rows.Count > 0 && Convert.ToInt32(dt6.Rows[0][0]) > 0)
+            {
+                return "BRANCHID EXISTS";
+            }
+            DataTable dt7 = dbobj.GetDataTable("Select (count(branch_name)) from branch_mst_nucleus where branch_name ='" + objBranchMasterProperties.BRANCHNAME + "'", null, CommandType.Text, true);
+            if (dt7.Rows.Count > 0 && Convert.ToInt32(dt7.Rows[0][0]) > 0)
+            {
+                return "BRANCHNAME EXISTS";
+            }
+
+            DataTable dt8 = dbobj.GetDataTable("Select (count(branch_code)) from branch_mst_nucleus where branch_code ='" + objBranchMasterProperties.BRANCHCODE + "'", null, CommandType.Text, true);
+            if (dt8.Rows.Count > 0 && Convert.ToInt32(dt8.Rows[0][0]) > 0)
+            {
+                return "BRANCHCODE EXISTS";
+            }
+
+            //else
+            //{
+            List<string> _CMD = new List<string>();
+
+            if (Convert.ToInt32(branch_id) == 0)
+            {
+                _CMD.Add("insert into branch_mst_nucleus m(m.branchid,m.branch_code,m.branch_name,m.branch_id)values('" + objBranchMasterProperties.BRANCHID + "','" + objBranchMasterProperties.BRANCHCODE + "','" + objBranchMasterProperties.BRANCHNAME + "','" + objBranchMasterProperties.BRANCH_ID + "')");
+                _CMD.Add("update branch_master set branch_no='" + objBranchMasterProperties.BRANCHID + "' where branch_id='"+objBranchMasterProperties.BRANCH_ID+"' ");
+            }
+            else
+            {
+                _CMD.Add("insert into branch_mst_nucleus m(m.branchid,m.branch_code,m.branch_name,m.branch_id)values('" + objBranchMasterProperties.BRANCHID + "','" + objBranchMasterProperties.BRANCHCODE + "','" + objBranchMasterProperties.BRANCHNAME + "','" + objBranchMasterProperties.BRANCH_ID + "')");
+                _CMD.Add("update branch_master set branch_no='" + objBranchMasterProperties.BRANCHID + "'where branch_id='" + objBranchMasterProperties.BRANCH_ID + "' ");
+            }
+
+            bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+           
+            //--------EOD-------
+            if (Convert.ToDouble(batchid) == 0)
+            {
+
+              // var result9 = dbobj.ExecuteScalar("select round(nvl(max(batch_no),0))+1 from gl_data_batch", null, CommandType.Text, true);
+                var result9 = dbobj.ExecuteScalar("select nvl(max(batch_no),0) from gl_data_batch", null, CommandType.Text, true);
+                batchid = Convert.ToDouble(result9);
+                //_CMD.Add("update  gl_data_nucleus set batch_no= '" + batchid + "'");
+
+                //bool _value1 = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                DbParameter[] para = new DbParameter[2];
+                para[0] = dbobj.CreatePrameter("batchid", batchid, DbType.Double, 7);
+                para[0].Direction = ParameterDirection.Input;
+                para[1] = dbobj.CreatePrameter("msg", "0", DbType.String, 4000);
+                para[1].Direction = ParameterDirection.Output;
+                int Result1 = Convert.ToInt32(dbobj.ExecuteQuery("Account_EOD_Updation", para, CommandType.StoredProcedure));
+
+                string Returnmsg = Convert.ToString(para[1].Value);
+                string[] query = Returnmsg.Split('^');
+
+
+                           
+            }
+
+            if (_value == true)
+            {
+
+                _CMD.Clear();
+
+                return "Success";
+
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+            }
+        }
+
+        public string InsertAccount_map(BranchMasterProperties objBranchMasterProperties)
+        {
+            DataTable dt8 = dbobj.GetDataTable("Select (count(GROUPGLID)) from account_profile_nucleus where GROUPGLID ='" + objBranchMasterProperties.finAcc + "'", null, CommandType.Text, true);
+            if (dt8.Rows.Count > 0)
+            {
+                return "Already Exists";
+            }
+            List<string> _CMD = new List<string>();
+
+            // var r1 = dbobj.ExecuteScalar("select max(groupglid)+1 from account_profile_nucleus where l1='" + objBranchMasterProperties.Group_Id + "'", null, CommandType.Text, true);
+            var r2 = dbobj.ExecuteScalar("select max(l4)+0001 from account_profile_nucleus where l1='" + objBranchMasterProperties.Group_Id + "'", null, CommandType.Text, true);
+            // glid = Convert.ToInt32(r1);
+            L4 = Convert.ToInt32(r2);
+            int pid = objBranchMasterProperties.Id;
+
+            _CMD.Add(" insert into account_profile_nucleus(account_name,groupglid,parentgroup,parentid,voucher_posting,account_type,l1,l2,l3,l4,account_no,sub_accno,segment_id)values('" + objBranchMasterProperties.ACCOUNT_NAME + "','" + objBranchMasterProperties.finAcc + "','No','" + pid + "','" + objBranchMasterProperties.VOUCHER_POST + "','" + objBranchMasterProperties.Group_Name + "','" + objBranchMasterProperties.Group_Id + "','0','0','" + L4 + "','" + objBranchMasterProperties.ACCOUNT_NO + "','" + (objBranchMasterProperties.SUB_ACC == 0 ? string.Empty : objBranchMasterProperties.SUB_ACC.ToString()) + "','" + objBranchMasterProperties.Segment_NAME + "')");
+
+            //}
+
+
+            bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+
+            if (Convert.ToInt32(batchid) == 0)
+            {
+
+                //var result9 = dbobj.ExecuteScalar("select nvl(max(batch_no),100)+1 batch_no from GL_DATA_NUCLEUS_HIS", null, CommandType.Text, true);
+                var result9 = dbobj.ExecuteScalar("select nvl(max(batch_no),0) from gl_data_batch", null, CommandType.Text, true);
+                batchid = Convert.ToInt32(result9);
+                DbParameter[] para = new DbParameter[2];
+                para[0] = dbobj.CreatePrameter("batchid", batchid, DbType.Int32, 7);
+                para[0].Direction = ParameterDirection.Input;
+                para[1] = dbobj.CreatePrameter("msg", "0", DbType.String, 4000);
+                para[1].Direction = ParameterDirection.Output;
+                int Result1 = Convert.ToInt32(dbobj.ExecuteQuery("Account_EOD_Updation", para, CommandType.StoredProcedure));
+
+                string Returnmsg = Convert.ToString(para[1].Value);
+                string[] query = Returnmsg.Split('^');
+
+
+
+            }
+
+            if (_value == true)
+            {
+
+
+                _CMD.Clear();
+
+                return "Success";
+
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+            }
+        }
+
+
+        public string ModifyBranchDFL(BranchMasterProperties entry)
+        {
+            List<string> _CMD = new List<string>();
+
+
+            _CMD.Add("update  branch_master set branch_name= '" + entry.BRANCH_NAME + "',BRANCH_ABBR='" + entry.BRANCH_ABBR + "',BRANCH_ADDR='" + entry.BRANCH_ADDRESS + "',PHONE1='" + entry.MOBILE + "',DISTRICT_ID='" + entry.district + "',STATE_ID='" + entry.state + "',STATUS_ID='"+ entry.STATUS_ID+"' where branch_id='" + entry.BRANCH_ID + "'");
+         
+            bool _value1 = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+            if (_value1 == true)
+            {
+                _CMD.Clear();
+                return "Success";
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+
+            }
+        }
+
+
+        public List<BranchMasterProperties> GetBranchModify(BranchMasterProperties entries)
+        {
+            DataTable dt = new DataTable();
+            List<BranchMasterProperties> branch = new List<BranchMasterProperties>();
+
+
+
+
+            dt = dbobj.GetDataTable("SELECT b.BRANCH_NAME,b.branch_id,b.branch_abbr,b.branch_addr,b.phone1,b.district_id,d.district_name,b.state_id,s.state_name,b.tra_dt from branch_master b,district_master d,state_master s where b.district_id=d.district_id and d.state_id=s.state_id and b.branch_id='" + entries.BRANCH_ID + "' ");
+
+
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    branch.Add(new BranchMasterProperties
+                    {
+                        BRANCH_ID = Convert.ToInt32(dRow["branch_id"]),
+                        BRANCH_NAME = Convert.ToString(dRow["BRANCH_NAME"]),
+                        BRANCH_ABBR=Convert.ToString(dRow["BRANCH_ABBR"]),
+                        BRANCH_ADDRESS=Convert.ToString(dRow["BRANCH_ADDR"]),
+                        MOBILE=Convert.ToString(dRow["PHONE1"]),
+                      //  FIRM_ID=Convert.ToInt32(dRow["FIRM_ID"]),
+                        DISTRICT_ID=Convert.ToInt32(dRow["DISTRICT_ID"]),
+                        district = Convert.ToString(dRow["DISTRICT_NAME"]),
+                        STATE_ID=Convert.ToInt32(dRow["STATE_ID"]),
+                        state = Convert.ToString(dRow["STATE_NAME"]),
+                        tra_date=Convert.ToDateTime(dRow["TRA_DT"])
+                    });
+
+                }
+
+                return branch;
+            }
+            else
+            {
+                branch.Insert(0, new BranchMasterProperties
+                {
+                    BRANCH_NAME = "-SELECT-",
+                    BRANCH_ID = -1
+                });
+
+                return branch;
+            }
+        }
+
+        public List<tdsProperties> Getstate()
+        {
+
+            DataTable dt = dbobj.GetDataTable("Select * from state_master  where state_id<>1 order by state_name", null, CommandType.Text, true);
+            List<tdsProperties> obj1 = new List<tdsProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new tdsProperties
+                    {
+                        Id = Convert.ToInt32(dRow["state_id"]),
+                        Name = Convert.ToString(dRow["state_name"])
+                    });
+                }
+
+
+
+            }
+
+            obj1.Insert(0, new tdsProperties
+            {
+                Id = -1,
+                Name = "-Select-"
+            });
+
+            return obj1;
+
+
+        }
+
+        public List<tdsProperties> Getdistrict()
+        {
+
+            DataTable dt = dbobj.GetDataTable("Select * from district_master t where  t.state_id='" + tdsProp.Id + "'  order by t.district_name ", null, CommandType.Text, true);
+            List<tdsProperties> obj1 = new List<tdsProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new tdsProperties
+                    {
+                        Id = Convert.ToInt32(dRow["district_id"]),
+                        Name = Convert.ToString(dRow["district_name"])
+                    });
+                }
+            }
+            obj1.Insert(0, new tdsProperties
+            {
+                Id = -1,
+                Name = "-Select-"
+            });
+
+
+            return obj1;
+
+
+        }
+
+
+        public List<BranchMasterProperties> Getbranchstatus()
+        {
+
+            DataTable dt = dbobj.GetDataTable("Select * from status_master where module_id=96 ", null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+                        Id = Convert.ToInt32(dRow["status_id"]),
+                        Name = Convert.ToString(dRow["DESCRIPTION"])
+                    });
+                }
+
+
+
+            }
+
+            obj1.Insert(0, new BranchMasterProperties
+            {
+                Id = -1,
+                Name = "-Select-"
+            });
+
+            return obj1;
+
+
+        }
+
+        public List<BranchMasterProperties> GetVoc_Post()
+        {
+
+            DataTable dt = dbobj.GetDataTable("Select * from status_master where module_id=97 ", null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+                        Id = Convert.ToInt32(dRow["status_id"]),
+                        Name = Convert.ToString(dRow["DESCRIPTION"])
+                    });
+                }
+
+
+
+            }
+
+            obj1.Insert(0, new BranchMasterProperties
+            {
+                Id = -1,
+                Name = "-Select-"
+            });
+
+            return obj1;
+
+
+        }
+
+
+        public List<BranchMasterProperties> GetGroupName()
+        {
+
+            DataTable dt = dbobj.GetDataTable("Select * from status_master where module_id=98 ", null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+                        Group_Id = Convert.ToInt32(dRow["status_id"]),
+                       Group_Name = Convert.ToString(dRow["DESCRIPTION"])
+                    });
+                }
+
+
+
+            }
+
+            obj1.Insert(0, new BranchMasterProperties
+            {
+                Group_Id = -1,
+                Group_Name = "-Select-"
+            });
+
+            return obj1;
+
+
+        }
+
+
+        public List<BranchMasterProperties> GetSub_Acc()
+        {
+
+            DataTable dt = dbobj.GetDataTable("select distinct(s.account_no),s.account_name from subsidary_master s,account_profile a where a.account_no=s.parent_acc order by account_no", null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+
+                        SUB_ACC = Convert.ToInt32(dRow["account_no"]),
+                        Name = Convert.ToString(dRow["account_name"])
+
+                    });
+                }
+
+
+
+            }
+
+            //obj1.Insert(0, new BranchMasterProperties
+            //{
+            //    Id = -1,
+            //    Name = "-Select-"
+
+            //});
+
+            return obj1;
+
+
+        }
+
+
+
+        public List<BranchMasterProperties> SearchAccount(string _SEARCH)
+        {
+            string query = "";
+            query = "select account_no,account_name from account_profile where account_no like '" + _SEARCH + "' ";
+
+            DataTable dt = dbobj.GetDataTable(query, null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+                        ACCOUNT_NO = Convert.ToInt32(dRow["account_no"]),
+                        ACCOUNT_NAME = Convert.ToString(dRow["account_name"])
+
+                    });
+
+                }
+
+
+            }
+
+            return obj1;
+
+
+
+        }
+
+
+
+
+
+
+           public List<BranchMasterProperties> GetAccountDetails()
+        {
+             DataTable dt = dbobj.GetDataTable("Select account_no from account_profile", null, CommandType.Text, true);
+            List<BranchMasterProperties> obj1 = new List<BranchMasterProperties>();
+            if (dt.Rows.Count > 0)
+            {
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BranchMasterProperties
+                    {
+                        ACCOUNT_NO = Convert.ToInt32(dRow["account_no"])
+                        //Group_Name = Convert.ToString(dRow["DESCRIPTION"])
+                    });
+                }
+               
+
+            }
+            return obj1;
+        }
+
+
+
+
+
+
+
+
+
+
+
+        public string BRANCH_NAME { get; set; }
+
+      // public int BRANCH_ID{get;set}
+
+
+
+
+
+        //public List<BranchMasterProperties> Getbranchstatus()
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        public List<BranchMasterProperties> GetBranchDDL()
+        {
+            throw new NotImplementedException();
+        }
+
+        //public List<BranchMasterProperties> GetBranchMap(BranchMasterProperties objBranchMasterProperties)
+        //{
+        //    throw new NotImplementedException();
+        //}
+    }
+}
 
