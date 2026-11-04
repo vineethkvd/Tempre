@@ -1,1 +1,442 @@
+@{
+    ViewData["Title"] = "Account Mapping";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACCOUNT MAPPING</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container-css {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #f4f6f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        .search-box {
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border: 1px solid #b0bec5;
+        }
+
+        .table-custom th {
+            background-color: #85c1e9 !important;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+
+        .table-custom td {
+            border: 1px solid #b0bec5;
+            padding: 12px 15px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .label-cell {
+            text-align: right;
+            font-weight: bold;
+            width: 25%;
+            background-color: #fdfdfd;
+        }
+
+        .input-cell {
+            width: 25%;
+        }
+
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 13px;
+            width: 100%;
+            background-color: #ffffff;
+        }
+
+        .readonly-field {
+            background-color: #e9ecef !important;
+            cursor: not-allowed;
+            color: #495057;
+        }
+
+        .btn-action {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            font-weight: bold;
+            padding: 6px 20px;
+            min-width: 100px;
+        }
+
+        .btn-action:hover {
+            background-color: #1a252f;
+            color: white;
+        }
+
+        .btn-search {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 6px 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        
+        <!-- Search Section -->
+        <div class="search-box row align-items-center">
+            <div class="col-md-3 text-md-end fw-bold">
+                Search Account Number:
+            </div>
+            <div class="col-md-7">
+                <input type="text" id="TxtSrch" class="form-control-sm text-uppercase" placeholder="Enter Account Number" />
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn-search w-100" onclick="BtnSrch_Click()">Search</button>
+            </div>
+        </div>
+
+        <!-- Details Section -->
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th colspan="4">ACCOUNT MAPPING</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Account Number :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtAccNo" class="form-control-sm readonly-field" readonly />
+                    </td>
+                    <td class="label-cell">Sub_Account Number :</td>
+                    <td class="input-cell">
+                        <select id="cmbsub_acc" class="form-select-sm">
+                            <option value="-1">-Select-</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Account Name :</td>
+                    <td colspan="3" class="input-cell">
+                        <input type="text" id="txtAcc_Name" class="form-control-sm text-uppercase" />
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td class="label-cell">Fin Account :</td>
+                    <td colspan="3" class="input-cell">
+                        <input type="text" id="txtfinAcc" class="form-control-sm text-uppercase" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Group Name :</td>
+                    <td class="input-cell">
+                        <select id="cmbgp_name" class="form-select-sm" onchange="cmbgp_name_SelectedIndexChanged()">
+                            <option value="-1">-Select-</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">Parent Id :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtparent_id" class="form-control-sm readonly-field" readonly />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Account Type :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtacc_type" class="form-control-sm readonly-field" readonly />
+                    </td>
+                    <td class="label-cell">Voucher Posting :</td>
+                    <td class="input-cell">
+                        <select id="cmbvo_post" class="form-select-sm">
+                            <option value="-1">-Select-</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Segment :</td>
+                    <td colspan="3" class="input-cell">
+                        <select id="cmbSegment" class="form-select-sm" style="max-width: 250px;">
+                            <option value="-1">-Select-</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="4" class="text-center" style="padding: 20px; background-color: #fdfdfd;">
+                        <button type="button" class="btn btn-sm btn-action me-3" onclick="btnConfirm_Click()">Confirm</button>
+                        <button type="button" class="btn btn-sm btn-action" onclick="window.history.back()">Exit</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const firm_id = '@ViewData["FirmID"]';
+
+        $(document).ready(function () {
+            $('#cmbgp_name').select2();
+            $('#cmbvo_post').select2();
+            $('#cmbsub_acc').select2();
+            $('#cmbSegment').select2();
+            
+            LoadDropdowns();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : "/" + root + "/Others/postAPIData".replace(/\/+/g, "/");
+        }
+
+        // ==========================================
+        // Dropdown Initializations
+        // ==========================================
+
+        function LoadDropdowns() {
+            // Load Group Names
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_GROUP^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbgp_name');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.GROUP_ID || row.group_id) + '">' + (row.GROUP_NAME || row.group_name) + '</option>');
+                        });
+                    }
+                }
+            });
+
+            // Load Voucher Postings
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_VO_POST^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbvo_post');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.ID || row.id) + '">' + (row.NAME || row.name) + '</option>');
+                        });
+                    }
+                }
+            });
+
+            // Load Sub Accounts
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_SUB_ACC^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbsub_acc');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.SUB_ACC || row.sub_acc) + '">' + (row.NAME || row.name) + '</option>');
+                        });
+                    }
+                }
+            });
+
+            // Load Segments
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_SEGMENT^" + firm_id + "^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbSegment');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.SEGMENT_ID || row.segment_id) + '">' + (row.SEGMENT_NAME || row.segment_name) + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // Event Handlers
+        // ==========================================
+
+        function BtnSrch_Click() {
+            var searchTxt = $('#TxtSrch').val().trim();
+            if (searchTxt === "") {
+                Swal.fire("Information", "Enter Account Number", "info");
+                return;
+            }
+
+            var cleanSearchTxt = searchTxt.split('|')[0].trim();
+            $('#TxtSrch').val(cleanSearchTxt);
+
+            Swal.fire({ title: "Searching...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: "ACC_MAP_SEARCH_ACC^" + cleanSearchTxt + "^1" },
+                success: function (res) {
+                    Swal.close();
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    
+                    if (data && data.length > 0) {
+                        // Find match mimicking C# Find logic
+                        var match = data.find(p => p.ACCOUNT_NO == cleanSearchTxt || p.account_no == cleanSearchTxt);
+                        
+                        if (match) {
+                            $('#txtAccNo').val(match.ACCOUNT_NO || match.account_no);
+                            $('#txtAcc_Name').val(match.ACCOUNT_NAME || match.account_name);
+                        } else {
+                            Swal.fire("Information", "No Data Found", "info");
+                        }
+                    } else {
+                        Swal.fire("Information", "No Data Found", "info");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
+
+        function cmbgp_name_SelectedIndexChanged() {
+            var gpId = $('#cmbgp_name').val();
+            var gpText = $("#cmbgp_name option:selected").text();
+
+            $('#txtacc_type').val('');
+            $('#txtparent_id').val('');
+
+            if (gpId && gpId != "-1") {
+                // Set Account Type
+                var accType = gpText.split('|')[0].trim();
+                $('#txtacc_type').val(accType);
+
+                // Set Parent Id logic mapped from C#
+                var gpIdInt = parseInt(gpId);
+                if (gpIdInt === 1) { $('#txtparent_id').val("1000000"); }
+                else if (gpIdInt === 2) { $('#txtparent_id').val("2000000"); }
+                else if (gpIdInt === 3) { $('#txtparent_id').val("3000000"); }
+                else if (gpIdInt === 4) { $('#txtparent_id').val("4000000"); }
+                else if (gpIdInt === 5) { $('#txtparent_id').val("5000000"); }
+                else if (gpIdInt === 6) { $('#txtparent_id').val("6000000"); }
+            }
+        }
+
+        // ==========================================
+        // Save Logic
+        // ==========================================
+
+        function btnConfirm_Click() {
+            var txtAccNo = $('#txtAccNo').val().trim();
+            var txtAccName = $('#txtAcc_Name').val().trim();
+            var txtfinAcc = $('#txtfinAcc').val().trim();
+            var cmbgp_name = $('#cmbgp_name').val();
+            var cmbvo_post = $('#cmbvo_post').val();
+            var cmbSegment = $('#cmbSegment').val();
+
+            if (txtAccNo === "") { Swal.fire("Account Mapping", "Enter Account Number", "info"); return; }
+            if (txtAccName === "") { Swal.fire("Account Mapping", "Enter Account Name", "info"); return; }
+            if (!cmbgp_name || cmbgp_name == "-1") { Swal.fire("Account Mapping", "Select Group ,To fill ParentId and Account Type", "info"); return; }
+            if (!cmbvo_post || cmbvo_post == "-1") { Swal.fire("Account Mapping", "Select Voucher post", "info"); return; }
+            if (!cmbSegment || cmbSegment == "-1") { Swal.fire("Account Mapping", "Select Segment", "info"); return; }
+            if (txtfinAcc === "") { Swal.fire("Account Mapping", "Enter Fin Account", "info"); return; }
+
+            Swal.fire({ title: "Saving...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            var parentId = $('#txtparent_id').val();
+            var accType = $('#txtacc_type').val();
+            var voPostText = $("#cmbvo_post option:selected").text();
+            var subAcc = $('#cmbsub_acc').val() == "-1" ? "0" : $('#cmbsub_acc').val();
+            var segmentText = $("#cmbSegment option:selected").text(); // Assuming Segment_NAME is the text based on legacy C# mapping
+
+            // Expected PL/SQL Params:
+            // 1: finAcc, 2: Group_Id (l1), 3: ACCOUNT_NAME, 4: parentid (pid), 5: VOUCHER_POST, 6: Group_Name (account_type), 7: ACCOUNT_NO, 8: SUB_ACC, 9: Segment_NAME
+            var reqData = "ACC_MAP_INSERT^" + txtfinAcc + "~" + cmbgp_name + "~" + txtAccName + "~" + parentId + "~" + voPostText + "~" + accType + "~" + txtAccNo + "~" + subAcc + "~" + segmentText + "^1";
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var status = data[0].STATUS || data[0].status;
+                        var resMsg = data[0].RES || data[0].res;
+                        
+                        if (status == 1 || status == "1") {
+                            Swal.fire("Account Mapping", "Added Successfully", "success").then(() => {
+                                ClearForm();
+                            });
+                        } else {
+                            Swal.fire("Account Mapping", "FinAccount Number Already Exists", "info").then(() => {
+                                ClearForm();
+                            });
+                        }
+                    } else {
+                        Swal.fire("Error", "Unexpected response from server.", "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Account Mapping", "Server connection failed.", "error");
+                }
+            });
+        }
+
+        function ClearForm() {
+            $('#TxtSrch').val('');
+            $('#txtAccNo').val('');
+            $('#txtfinAcc').val('');
+            $('#txtAcc_Name').val('');
+            $('#txtparent_id').val('');
+            $('#txtacc_type').val('');
+            
+            $('#cmbsub_acc').val('-1').trigger('change');
+            $('#cmbgp_name').val('-1').trigger('change');
+            $('#cmbvo_post').val('-1').trigger('change');
+            $('#cmbSegment').val('-1').trigger('change');
+        }
+    </script>
+</body>
+</html>
