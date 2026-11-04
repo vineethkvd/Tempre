@@ -1,87 +1,258 @@
+@{
+    ViewData["Title"] = "Add New Accounts";
+    Layout = "~/Views/Shared/_Layout.cshtml"; 
+}
 
-    -- ---------------------- ADD ACCOUNTS VERIFICATION & DROPDOWNS ---------------------- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADD NEW ACCOUNTS</title>
 
-    ELSIF p_flag = 'ADD_ACC_GET_NATURE' THEN
-        -- No parameters required
-        OPEN p_as_outresult FOR
-            select a.nature_no, a.accnature_name || ' | ' || chr(32) ||a.nature_no as accnature_name 
-            from account_nature a;
-
-    ELSIF p_flag = 'ADD_ACC_GET_SCHEDULE' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = NATURE_NO
-        OPEN p_as_outresult FOR
-            select a.schedule_no, a.schedule_name || ' | ' || chr(32) ||a.schedule_no as schedule_name 
-            from account_schedule a 
-            where a.nature_no = TO_NUMBER(v_spliter_a(1)) 
-            order by a.schedule_no;
-
-    ELSIF p_flag = 'ADD_ACC_GET_SUBSCHEDULE' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = SHEDULE_NO
-        OPEN p_as_outresult FOR
-            select a.subschedule_no, a.subschedule_name || ' | ' || chr(32) ||a.subschedule_no as subschedule_name 
-            from account_subschedule a 
-            where a.schedule_no = TO_NUMBER(v_spliter_a(1)) 
-            order by a.subschedule_no;
-
-    ELSIF p_flag = 'ADD_ACC_GET_SUBTYPE' THEN
-        -- No parameters required
-        OPEN p_as_outresult FOR
-            select t.status_id, t.description as SubType 
-            from status_master t 
-            where t.module_id=1 and t.option_id=18;
-
-    ELSIF p_flag = 'ADD_ACC_CHECK_PROFILE' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = NATURE_NO
-        -- v_spliter_a(2) = SHEDULE_NO
-        -- v_spliter_a(3) = SUB_SHEDULE_NO
-        OPEN p_as_outresult FOR
-            select count(*) as cnt 
-            from account_profile 
-            where nature_no = TO_NUMBER(v_spliter_a(1)) 
-            and SCHEDULE_NO = TO_NUMBER(v_spliter_a(2)) 
-            and SUBSCHEDULE_NO = TO_NUMBER(v_spliter_a(3));
-
-    ELSIF p_flag = 'ADD_ACC_CHECK_ACCNO' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = ACCOUNT_NO
-        OPEN p_as_outresult FOR
-            select count(*) as cnt 
-            from account_profile 
-            where account_no = TO_NUMBER(v_spliter_a(1));
-
-    ELSIF p_flag = 'ADD_ACC_CHECK_NAME' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = ACCOUNT_NAME
-        OPEN p_as_outresult FOR
-            select count(*) as cnt 
-            from account_profile 
-            where account_name = v_spliter_a(1);
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     
-    -- ---------------------- ADD ACCOUNTS INSERTION ---------------------- 
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
 
-    ELSIF p_flag = 'ADD_ACC_INSERT_NEW' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = ACCOUNTNO (id)
-        -- v_spliter_a(2) = ACCOUNTNAME
-        -- v_spliter_a(3) = SUB_SHEDULE_NO
-        -- v_spliter_a(4) = SHEDULE_NO
-        -- v_spliter_a(5) = NATURE_NO
-        -- v_spliter_a(6) = FIRM_ID
-        -- v_spliter_a(7) = HOSTATUS
-        -- v_spliter_a(8) = USERID
-        
-        insert into account_profile(account_no, account_name, ho_status, subschedule_no, schedule_no, nature_no) 
-        values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(2), 0, TO_NUMBER(v_spliter_a(3)), TO_NUMBER(v_spliter_a(4)), TO_NUMBER(v_spliter_a(5)));
-        
-        insert into account_status 
-        select v_spliter_a(6), b.branch_id, TO_NUMBER(v_spliter_a(1)), TO_NUMBER(v_spliter_a(7)) 
-        from branch_master b;
-        
-        insert into account_profile_dtl (account_no, created_by, created_dt) 
-        values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(8), sysdate);
+        .main-container-css {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #f4f6f9;
+            padding: 20px;
+            border: 2px solid #ccc;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        }
 
-        OPEN p_as_outresult FOR 
-            SELECT 'Success' AS res, 1 AS status FROM dual;
+        .header-title {
+            background-color: #b6b6b6;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .form-label-custom {
+            width: 30%;
+            text-align: right;
+            padding-right: 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .form-input-custom {
+            width: 60%;
+        }
+
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 13px;
+            width: 100%;
+            background-color: #fff;
+        }
+
+        .btn-action {
+            font-weight: bold;
+            font-size: 14px;
+            width: 100px;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        <div class="header-title">Add New Accounts</div>
+
+        <div class="container-fluid px-4 py-3 bg-white border">
+            
+            <div class="form-group-row">
+                <div class="form-label-custom">Account Nature :</div>
+                <div class="form-input-custom">
+                    <select id="cmbAccNature" class="form-select-sm select2-setup" onchange="cmbAccNature_onChange()">
+                        <option value="-1">-SELECT-</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-label-custom">Account Schedule :</div>
+                <div class="form-input-custom">
+                    <select id="cmbAccShedule" class="form-select-sm select2-setup" onchange="cmbAccShedule_onChange()">
+                        <option value="-1">-SELECT-</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-label-custom">Sub Schedule :</div>
+                <div class="form-input-custom">
+                    <select id="cmbSubShedule" class="form-select-sm select2-setup">
+                        <option value="-1">-SELECT-</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-label-custom">Sub Type :</div>
+                <div class="form-input-custom">
+                    <select id="cmbSubType" class="form-select-sm select2-setup">
+                        <option value="-1">-SELECT-</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-label-custom">New Account Name :</div>
+                <div class="form-input-custom">
+                    <!-- oninput replicates the KeyPress Regex logic blocking invalid symbols -->
+                    <input type="text" id="txtAccName" class="form-control-sm text-uppercase" maxlength="100" oninput="validateAccName(this)" />
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-label-custom">Account No :</div>
+                <div class="form-input-custom">
+                    <input type="text" id="valtxtAcountNo" class="form-control-sm" maxlength="5" oninput="this.value = this.value.replace(/[^0-9]/g, '');" />
+                </div>
+            </div>
+
+            <div class="text-center mt-5 mb-2">
+                <button type="button" class="btn btn-primary btn-action" onclick="btnConfirm_Click()">Confirm</button>
+                <button type="button" class="btn btn-secondary btn-action" onclick="btnExit_Click()">Exit</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const usr_id = '@ViewData["EmpCode"]'; // Session ID mapping
+        const firm_id = '@ViewData["FirmID"]';
+
+        $(document).ready(function () {$('.select2-setup').select2();
+            loadAccNature();
+            loadSubType();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
+        }
+
+        // Equivalent to txtAccName_KeyPress Regex filtering
+        function validateAccName(input) {
+            // Regex allowing only a-z, A-Z, 0-9, spaces, /, -, &, ()
+            var regex = /[^a-zA-Z0-9\s/\-&()]/g;
+            if (regex.test(input.value)) {
+                input.value = input.value.replace(regex, '');
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Invalid Symbol removed',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        }
+
+        // --- Dropdown Loading Functions --- //
+
+        function loadAccNature() {
+            var reqData = "ADD_ACC_GET_NATURE^^1";
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb =$('#cmbAccNature');
+                    $cmb.empty().append('<option value="-1">-SELECT-</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.NATURE_NO || row.nature_no;
+                            var text = row.ACCNATURE_NAME || row.accnature_name;
+                            $cmb.append(`<option value="${val}">${text}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function loadSubType() {
+            var reqData = "ADD_ACC_GET_SUBTYPE^^1";
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb =$('#cmbSubType');
+                    $cmb.empty().append('<option value="-1">-SELECT-</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.STATUS_ID || row.status_id;
+                            var text = row.SUBTYPE || row.subtype;
+                            $cmb.append(`<option value="${val}">${text}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function cmbAccNature_onChange() {
+            var val = $('#cmbAccNature').val();
+            $('#cmbAccShedule').empty().append('<option value="-1">-SELECT-</option>');
+            $('#cmbSubShedule').empty().append('<option value="-1">-SELECT-</option>');
+            
+            if (val != "-1") {
+                var reqData = "ADD_ACC_GET_SCHEDULE^" + val + "^1";
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            data.forEach(function (row) {
+                                var sVal = row.SCHEDULE_NO || row.schedule_no;
+                                var sText = row.SCHEDULE_NAME || row.schedule_name;
+                                $('#cmbAccShedule').append(`<option value="${sVal}">${sText}</option>`);
+                            });
+                        }
+                    }
+                });
+            }
+        }
+
+        function cmbAccShedule_onChange() {
+            var val = $('#cmbAccShedule').val();
+            $('#cmbSubShedule').empty().append('<option value="-1">-SELECT-</option>');
+            
+            if (val != "-1") {
+                var reqData = "ADD_ACC_GET_SUBSCHEDULE^" + val + "^1";
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
