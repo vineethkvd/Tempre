@@ -1,1 +1,502 @@
 
+@{
+    ViewData["Title"] = "Add/Modify Sub Accounts";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADD/MODIFY SUB ACCOUNTS</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container-css {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #f4f6f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border: 1px solid #b0bec5;
+        }
+
+        .table-custom th {
+            background-color: #85c1e9 !important;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+
+        .table-custom td {
+            border: 1px solid #b0bec5;
+            padding: 12px 15px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .label-cell {
+            text-align: right;
+            font-weight: bold;
+            width: 35%;
+            background-color: #fdfdfd;
+        }
+
+        .input-cell {
+            width: 65%;
+        }
+
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 13px;
+            width: 80%;
+            background-color: #ffffff;
+        }
+
+        .form-control-sm:focus, .form-select-sm:focus {
+            background-color: #f1f8ff;
+            border-color: #0066cc;
+            outline: none;
+        }
+
+        .btn-action {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            font-weight: bold;
+            padding: 6px 20px;
+            min-width: 100px;
+        }
+
+        .btn-action:hover {
+            background-color: #1a252f;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th colspan="2">ADD / MODIFY SUB ACCOUNTS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="2" class="text-center" style="background-color: #fdfdfd; padding: 15px;">
+                        <input type="radio" id="rdbtn_all" name="AccMode" value="All" checked class="form-check-input me-1" onchange="toggleMode()">
+                        <label for="rdbtn_all" class="form-check-label fw-bold me-4">All</label>
+
+                        <input type="radio" id="rdbtn_branch" name="AccMode" value="Branch" class="form-check-input me-1" onchange="toggleMode()">
+                        <label for="rdbtn_branch" class="form-check-label fw-bold">Branch Wise</label>
+                    </td>
+                </tr>
+
+                <tr id="rowBranch" style="display:none;">
+                    <td class="label-cell">Branch :</td>
+                    <td class="input-cell">
+                        <select id="cmbBranch" class="form-select-sm" onchange="cmbBranch_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Account No :</td>
+                    <td class="input-cell">
+                        <select id="cmbAccount" class="form-select-sm" onchange="cmbAccount_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Modify Sub Account :</td>
+                    <td class="input-cell">
+                        <input type="checkbox" id="chkModify" class="form-check-input" onchange="chkModify_CheckedChanged()" />
+                    </td>
+                </tr>
+
+                <tr id="rowSubAccount" style="display:none;">
+                    <td class="label-cell">Sub Account No :</td>
+                    <td class="input-cell">
+                        <select id="cmbSubAccount" class="form-select-sm" onchange="cmbSubAccount_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell" id="lblSubAccName">New Sub Account Name :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtSubAccName" class="form-control-sm text-uppercase" maxlength="100" onkeypress="return validateAccName(event)" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" class="text-center" style="padding: 20px; background-color: #fdfdfd;">
+                        <button type="button" class="btn btn-sm btn-action me-3" onclick="btnConfirm_Click()">Confirm</button>
+                        <button type="button" class="btn btn-sm btn-action" onclick="window.history.back()">Exit</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const usr_id = '@ViewData["EmpCode"]';
+        const firm_id = '@ViewData["FirmID"]';
+        const branch_id = '@ViewData["BrID"]'; 
+        
+        // Settings analogous to legacy system
+        var segment_id = 1; 
+        var status_id = 1;  
+        var extractedUsrId = usr_id.split('!')[0];
+
+        $(document).ready(function () {
+            $('#cmbBranch').select2();
+            $('#cmbAccount').select2();
+            $('#cmbSubAccount').select2();
+            
+            // Initialization
+            toggleMode();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : `/${root}/Others/postAPIData`.replace(/\/+/g, "/");
+        }
+
+        // ==========================================
+        // UI Toggles & Data Loading
+        // ==========================================
+
+        function toggleMode() {
+            var isBranchMode = $('#rdbtn_branch').is(':checked');
+            if (isBranchMode) {
+                $('#rowBranch').show();
+                fetchBranches(); // Fetch branches if needed, or assume pre-loaded
+            } else {
+                $('#rowBranch').hide();
+                $('#cmbBranch').val('-1').trigger('change');
+                fetchAccounts(); // Fetch all firm accounts
+            }
+            ClearAllControls();
+        }
+
+        function fetchBranches() {
+            // Placeholder: Assuming a standard MEBS flag for branches exists. 
+            // If not, use your standard branch fetcher.
+            var reqData = "GET_ACTIVE_BRANCHES^" + firm_id + "^1"; 
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbBranch');
+                    $cmb.empty().append('<option value="-1">------SELECT------</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append(`<option value="${row.BRANCH_ID}">${row.BRANCH_NAME}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function fetchAccounts() {
+            var selectedBranch = $('#rdbtn_branch').is(':checked') ? $('#cmbBranch').val() : "0";
+            
+            // Format: SEGMENT_ID ~ STATUSID ~ FIRMID ~ BRANCHID
+            var reqData = "ADD_SUB_ACC_GET_LIST^" + segment_id + "~" + status_id + "~" + firm_id + "~" + selectedBranch + "^1";
+            
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbAccount');
+                    $cmb.empty().append('<option value="-1">------SELECT------</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.ACCOUNT_NO || row.account_no;
+                            var name = row.NAME || row.name;
+                            $cmb.append(`<option value="${val}">${name}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function cmbBranch_SelectedIndexChanged() {
+            var branch = $('#cmbBranch').val();
+            if (branch && branch != "-1") {
+                fetchAccounts();
+            } else {
+                $('#cmbAccount').empty().append('<option value="-1">------SELECT------</option>');
+            }
+            ClearAllControls(false); // Preserve branch
+        }
+
+        function chkModify_CheckedChanged() {
+            var isModify = $('#chkModify').is(':checked');
+            
+            if (isModify) {
+                $('#lblSubAccName').text("Edit Sub Account Name :");
+                
+                var parentAcc = $('#cmbAccount').val();
+                if (parentAcc && parentAcc != "-1") {
+                    $('#txtSubAccName').val('');
+                    checkHasSubAccounts(parentAcc);
+                }
+            } else {
+                $('#lblSubAccName').text("New Sub Account Name :");
+                $('#rowSubAccount').hide();
+                $('#txtSubAccName').val('');
+            }
+        }
+
+        function cmbAccount_SelectedIndexChanged() {
+            if ($('#chkModify').is(':checked')) {
+                var parentAcc = $('#cmbAccount').val();
+                if (parentAcc && parentAcc != "-1") {
+                    $('#txtSubAccName').val('');
+                    checkHasSubAccounts(parentAcc);
+                } else {
+                    $('#rowSubAccount').hide();
+                }
+            }
+        }
+
+        function checkHasSubAccounts(parentAcc) {
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: "ADD_SUB_ACC_CHECK^" + parentAcc + "^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var cnt = data[0].CNT || data[0].cnt || 0;
+                    
+                    if (cnt > 0) {
+                        $('#rowSubAccount').show();
+                        fetchSubAccounts(parentAcc);
+                    } else {
+                        $('#rowSubAccount').hide();
+                        Swal.fire("Sub Accounts", "No Existing Sub Accounts", "info");
+                    }
+                }
+            });
+        }
+
+        function fetchSubAccounts(parentAcc) {
+            var opt = $('#rdbtn_branch').is(':checked') ? "Branch" : "All";
+            var branch = $('#cmbBranch').val() || "0";
+            
+            // Format: OPTION ~ STATUS_ID ~ PARENT_ACC ~ FIRM_ID ~ BRANCH_ID
+            var reqData = "ADD_SUB_ACC_GET_SUBS^" + opt + "~1~" + parentAcc + "~" + firm_id + "~" + branch + "^1";
+            
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbSubAccount');
+                    $cmb.empty().append('<option value="-1">------SELECT------</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.ACCOUNT_NO || row.account_no;
+                            var name = row.SUBACCOUNTNAME || row.subaccountname;
+                            $cmb.append(`<option value="${val}">${name}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function cmbSubAccount_SelectedIndexChanged() {
+            var subAccNo = $('#cmbSubAccount').val();
+            var parentAcc = $('#cmbAccount').val();
+            
+            if (subAccNo && subAccNo != "-1") {
+                // Fetch the existing raw name for the textbox
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: "ADD_SUB_ACC_NAME^" + subAccNo + "~" + parentAcc + "^1" },
+                    success: function (res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var rawName = data[0].ACCOUNT_NAME || data[0].account_name;
+                            $('#txtSubAccName').val(rawName);
+                        }
+                    }
+                });
+            } else {
+                $('#txtSubAccName').val('');
+            }
+        }
+
+        // ==========================================
+        // Validation & Save Logic
+        // ==========================================
+
+        function validateAccName(e) {
+            // C# Regex: /[^a-zA-Z0-9\s/\-&()\b]/
+            var regex = new RegExp("^[a-zA-Z0-9\\s/\\-&()]+$");
+            var key = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+            
+            if (e.charCode === 0 || e.keyCode === 8 || e.keyCode === 46) return true;
+
+            if (!regex.test(key)) {
+                e.preventDefault();
+                Swal.fire("Warning", "Invalid Symbol: " + key, "warning");
+                return false;
+            }
+            return true;
+        }
+
+        function IsValidAll() {
+            var isBranchMode = $('#rdbtn_branch').is(':checked');
+            var branch = $('#cmbBranch').val();
+            var account = $('#cmbAccount').val();
+            var isModify = $('#chkModify').is(':checked');
+            var subAccount = $('#cmbSubAccount').val();
+            var accName = $('#txtSubAccName').val().trim();
+
+            if (isBranchMode && (!branch || branch == "-1")) {
+                Swal.fire("Warning", "Select Branch.", "warning");
+                return false;
+            }
+            if (!account || account == "-1") {
+                Swal.fire("Warning", "Account Required.", "warning");
+                return false;
+            }
+            if (isModify && (!subAccount || subAccount == "-1")) {
+                Swal.fire("Warning", "Sub Account Required.", "warning");
+                return false;
+            }
+            if (accName === "") {
+                Swal.fire("Warning", "Sub Account Name Required.", "warning");
+                return false;
+            }
+            return true;
+        }
+
+        function btnConfirm_Click() {
+            if (!IsValidAll()) return;
+
+            var parentAcc = $('#cmbAccount').val();
+            var accName = $('#txtSubAccName').val().trim().toUpperCase();
+            var isModify = $('#chkModify').is(':checked');
+            var subAccNo = isModify ? $('#cmbSubAccount').val() : "0";
+
+            Swal.fire({ title: "Processing...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            // Check if name already exists
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: "ADD_SUB_ACC_EXIST^" + parentAcc + "~" + accName + "^1" },
+                success: function (resExist) {
+                    var dataExist = typeof resExist === "string" ? JSON.parse(resExist) : resExist;
+                    var existCnt = dataExist[0].CNT || dataExist[0].cnt || 0;
+                    
+                    if (existCnt > 0) {
+                        Swal.fire("Sub Accounts", "Account Name Already Existing.", "info");
+                        return;
+                    }
+                    
+                    executeSave(parentAcc, accName, isModify, subAccNo);
+                }
+            });
+        }
+
+        function executeSave(parentAcc, accName, isModify, subAccNo) {
+            var opt = $('#rdbtn_branch').is(':checked') ? "Branch" : "All";
+            var branchId = $('#rdbtn_branch').is(':checked') ? $('#cmbBranch').val() : "0";
+
+            var reqData = "";
+            if (isModify) {
+                // UPDATE format: OPTION ~ ACCOUNT_NAME ~ ACCOUNT_NO ~ PARENT_ACC ~ BRANCH_ID ~ USERID ~ SUB_ID
+                reqData = "ADD_SUB_ACC_UPDATE^" + opt + "~" + accName + "~" + subAccNo + "~" + parentAcc + "~" + branchId + "~" + extractedUsrId + "~0^1";
+            } else {
+                // INSERT format: OPTION ~ PARENT_ACC ~ FIRM_ID ~ BRANCH_ID ~ ACCOUNT_NAME ~ USERID ~ SUB_ID
+                reqData = "ADD_SUB_ACC_INSERT^" + opt + "~" + parentAcc + "~" + firm_id + "~" + branchId + "~" + accName + "~" + extractedUsrId + "~0^1";
+            }
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var status = data[0].STATUS || data[0].status;
+                        
+                        if (status == 1 || status == "1") {
+                            Swal.fire("Sub Accounts", "Saved Successfully.", "success").then(() => {
+                                ClearAllControls(true);
+                            });
+                        } else {
+                            Swal.fire("Sub Accounts", "Failed. Please Try Again Later", "warning");
+                        }
+                    } else {
+                        Swal.fire("Error", "Unexpected error occurred!", "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "Server connection failed.", "error");
+                }
+            });
+        }
+
+        function ClearAllControls(preserveAccount = false) {
+            if (!preserveAccount) {
+                $('#cmbAccount').val('-1').trigger('change');
+            }
+            $('#chkModify').prop('checked', false);
+            $('#rowSubAccount').hide();
+            $('#cmbSubAccount').empty().append('<option value="-1">------SELECT------</option>');
+            $('#txtSubAccName').val('');
+            $('#lblSubAccName').text("New Sub Account Name :");
+        }
+    </script>
+</body>
+</html>
