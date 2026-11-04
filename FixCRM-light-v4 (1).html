@@ -1,1 +1,466 @@
 
+@{
+    ViewData["Title"] = "Account Mapping";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACCOUNT MAPPING</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container-css {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+            padding-bottom: 20px;
+        }
+
+        .header-title {
+            background-color: #e4d5e6;
+            color: #333333;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 10px;
+            border-bottom: 1px solid #d1d5db;
+            margin-bottom: 30px;
+        }
+
+        .form-label {
+            text-align: right;
+            font-weight: normal;
+            font-size: 13px;
+            color: #4a4a4a;
+            padding-top: 5px;
+        }
+
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #b0bec5;
+            border-radius: 2px;
+            padding: 4px 8px;
+            font-size: 13px;
+            width: 100%;
+            background-color: #ffffff;
+            height: 28px;
+        }
+
+        .form-control-sm:focus, .form-select-sm:focus {
+            border-color: #85c1e9;
+            outline: none;
+            box-shadow: 0 0 3px rgba(133, 193, 233, 0.5);
+        }
+
+        .readonly-field {
+            background-color: #f5f5f5 !important;
+            cursor: not-allowed;
+            color: #6c757d;
+        }
+
+        .btn-action {
+            background-color: #e0e0e0;
+            color: #333;
+            border: 1px solid #adb5bd;
+            font-size: 13px;
+            padding: 4px 25px;
+            min-width: 90px;
+        }
+
+        .btn-action:hover {
+            background-color: #d6d6d6;
+        }
+
+        .radio-group {
+            margin-bottom: 25px;
+            margin-left: 12%;
+        }
+
+        .radio-group label {
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .select2-container .select2-selection--single {
+            height: 28px !important;
+            border: 1px solid #b0bec5 !important;
+            border-radius: 2px !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 26px !important;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        
+        <div class="header-title">Account Mapping</div>
+
+        <!-- Radio Buttons -->
+        <div class="row radio-group">
+            <div class="col-md-8">
+                <div class="form-check form-check-inline me-5">
+                    <input class="form-check-input" type="radio" name="accMode" id="rdAccountNo" value="ACC" checked onchange="toggleMode()">
+                    <label class="form-check-label fw-bold text-primary" for="rdAccountNo">Account No</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="accMode" id="rdSubAccount" value="SUB" onchange="toggleMode()">
+                    <label class="form-check-label" for="rdSubAccount">Sub Account Number</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Number Row -->
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-2">
+                <label class="form-label w-100">Account Number</label>
+            </div>
+            <div class="col-md-5 d-flex">
+                <input type="text" id="txtSearch" class="form-control-sm me-2" placeholder="Search Acc..." style="width: 30%;" />
+                <button type="button" class="btn btn-sm btn-secondary me-2" onclick="searchAccounts()" style="height: 28px; line-height: 1;">Find</button>
+                <select id="cmbAccount" class="form-select-sm w-100">
+                    <option value="-1">-SELECT-</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Fin Account Row -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-2">
+                <label class="form-label w-100">Fin_Account No</label>
+            </div>
+            <div class="col-md-4">
+                <input type="text" id="txtfinAcc" class="form-control-sm text-uppercase" />
+            </div>
+        </div>
+
+        <!-- Group Name / Parentid / Account Type Row -->
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-2">
+                <label class="form-label w-100">Group Name</label>
+            </div>
+            <div class="col-md-2">
+                <select id="cmbgp_name" class="form-select-sm" onchange="cmbgp_name_SelectedIndexChanged()">
+                    <option value="-1">-Select-</option>
+                </select>
+            </div>
+            
+            <div class="col-md-1">
+                <label class="form-label w-100">Parentid</label>
+            </div>
+            <div class="col-md-2">
+                <input type="text" id="txtparent_id" class="form-control-sm readonly-field" readonly />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label w-100 pe-2">Account Type</label>
+            </div>
+            <div class="col-md-2" style="margin-left: -15px;">
+                <input type="text" id="txtacc_type" class="form-control-sm readonly-field" readonly value="-Select-" />
+            </div>
+        </div>
+
+        <!-- Voucher Posting / Segment Row -->
+        <div class="row mb-5 align-items-center">
+            <div class="col-md-2">
+                <label class="form-label w-100">Voucher Posting</label>
+            </div>
+            <div class="col-md-2">
+                <select id="cmbvo_post" class="form-select-sm">
+                    <option value="-1">-Select-</option>
+                </select>
+            </div>
+            
+            <div class="col-md-1">
+                <label class="form-label w-100">Segment</label>
+            </div>
+            <div class="col-md-2">
+                <select id="cmbSegment" class="form-select-sm">
+                    <option value="-1">-SELECT-</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mt-4">
+            <div class="col-md-9 text-end pe-5">
+                <button type="button" class="btn btn-action me-3" onclick="btnConfirm_Click()">Confirm</button>
+                <button type="button" class="btn btn-action" onclick="window.history.back()">Exit</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const firm_id = '@ViewData["FirmID"]';
+
+        $(document).ready(function () {
+            $('#cmbAccount').select2();
+            $('#cmbgp_name').select2();
+            $('#cmbvo_post').select2();
+            $('#cmbSegment').select2();
+            
+            LoadDropdowns();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : "/" + root + "/Others/postAPIData".replace(/\/+/g, "/");
+        }
+
+        // ==========================================
+        // Initialization & Mode Toggles
+        // ==========================================
+
+        function LoadDropdowns() {
+            // Load Group Names
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_GROUP^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbgp_name');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.GROUP_ID || row.group_id) + '">' + (row.GROUP_NAME || row.group_name) + '</option>');
+                        });
+                    }
+                }
+            });
+
+            // Load Voucher Postings
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_VO_POST^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbvo_post');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.ID || row.id) + '">' + (row.NAME || row.name) + '</option>');
+                        });
+                    }
+                }
+            });
+
+            // Load Segments
+            $.ajax({
+                type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_SEGMENT^" + firm_id + "^1" },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbSegment');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            $cmb.append('<option value="' + (row.SEGMENT_ID || row.segment_id) + '">' + (row.SEGMENT_NAME || row.segment_name) + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        function toggleMode() {
+            $('#cmbAccount').empty().append('<option value="-1">-SELECT-</option>').trigger('change');
+            $('#txtSearch').val('');
+            
+            var mode = $('input[name="accMode"]:checked').val();
+            
+            if (mode === "SUB") {
+                // Hide search box for Sub Accounts and load them automatically
+                $('#txtSearch').hide();
+                $('#txtSearch').next('button').hide();
+                Swal.fire({ title: "Loading Sub Accounts...", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                
+                $.ajax({
+                    type: "POST", url: postApiUrl(), data: { datas: "ACC_MAP_GET_SUB_ACC^1" },
+                    success: function (res) {
+                        Swal.close();
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        var $cmb = $('#cmbAccount');
+                        if (data && data.length > 0) {
+                            data.forEach(function (row) {
+                                // Value = SUB_ACC, Text = SUB_ACC - Name
+                                var val = row.SUB_ACC || row.sub_acc;
+                                var name = row.NAME || row.name;
+                                $cmb.append('<option value="' + val + '">' + val + ' - ' + name + '</option>');
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.close();
+                    }
+                });
+            } else {
+                // Show search box for standard accounts (too large to auto-load)
+                $('#txtSearch').show();
+                $('#txtSearch').next('button').show();
+            }
+        }
+
+        function searchAccounts() {
+            var searchTxt = $('#txtSearch').val().trim();
+            if (searchTxt === "") {
+                Swal.fire("Information", "Enter Account Number to search", "info");
+                return;
+            }
+
+            Swal.fire({ title: "Searching...", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: "ACC_MAP_SEARCH_ACC^" + searchTxt + "^1" },
+                success: function (res) {
+                    Swal.close();
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbAccount');
+                    $cmb.empty().append('<option value="-1">-SELECT-</option>');
+                    
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.ACCOUNT_NO || row.account_no;
+                            var name = row.ACCOUNT_NAME || row.account_name;
+                            $cmb.append('<option value="' + val + '">' + val + ' - ' + name + '</option>');
+                        });
+                        $cmb.select2('open'); // Auto-open to show results
+                    } else {
+                        Swal.fire("Information", "No Data Found", "info");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "Search failed.", "error");
+                }
+            });
+        }
+
+        // ==========================================
+        // Event Handlers
+        // ==========================================
+
+        function cmbgp_name_SelectedIndexChanged() {
+            var gpId = $('#cmbgp_name').val();
+            var gpText = $("#cmbgp_name option:selected").text();
+
+            $('#txtacc_type').val('-Select-');
+            $('#txtparent_id').val('');
+
+            if (gpId && gpId != "-1") {
+                // Extract string before the pipe if it exists (legacy C# mapping logic)
+                var accType = gpText.split('|')[0].trim();
+                $('#txtacc_type').val(accType);
+
+                // Parent ID logic mapped from legacy C#
+                var gpIdInt = parseInt(gpId);
+                if (gpIdInt === 1) { $('#txtparent_id').val("1000000"); }
+                else if (gpIdInt === 2) { $('#txtparent_id').val("2000000"); }
+                else if (gpIdInt === 3) { $('#txtparent_id').val("3000000"); }
+                else if (gpIdInt === 4) { $('#txtparent_id').val("4000000"); }
+                else if (gpIdInt === 5) { $('#txtparent_id').val("5000000"); }
+                else if (gpIdInt === 6) { $('#txtparent_id').val("6000000"); }
+            }
+        }
+
+        // ==========================================
+        // Save Logic
+        // ==========================================
+
+        function btnConfirm_Click() {
+            var accValue = $('#cmbAccount').val();
+            var accText = $("#cmbAccount option:selected").text();
+            var txtfinAcc = $('#txtfinAcc').val().trim();
+            var cmbgp_name = $('#cmbgp_name').val();
+            var cmbvo_post = $('#cmbvo_post').val();
+            var cmbSegment = $('#cmbSegment').val();
+            var mode = $('input[name="accMode"]:checked').val();
+
+            if (!accValue || accValue == "-1") { Swal.fire("Account Mapping", "Select an Account Number", "info"); return; }
+            if (txtfinAcc === "") { Swal.fire("Account Mapping", "Enter Fin Account No", "info"); return; }
+            if (!cmbgp_name || cmbgp_name == "-1") { Swal.fire("Account Mapping", "Select Group Name", "info"); return; }
+            if (!cmbvo_post || cmbvo_post == "-1") { Swal.fire("Account Mapping", "Select Voucher posting", "info"); return; }
+            if (!cmbSegment || cmbSegment == "-1") { Swal.fire("Account Mapping", "Select Segment", "info"); return; }
+
+            Swal.fire({ title: "Saving...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            // Extract Account Name from Dropdown text (e.g. "12345 - Cash Account" -> "Cash Account")
+            var txtAccName = accText.indexOf('-') > -1 ? accText.substring(accText.indexOf('-') + 1).trim() : accText;
+            
+            var parentId = $('#txtparent_id').val();
+            var accType = $('#txtacc_type').val();
+            var voPostText = $("#cmbvo_post option:selected").text();
+            var segmentText = $("#cmbSegment option:selected").text();
+
+            // Set Sub Account vs Main Account variables correctly
+            var txtAccNo = mode === "ACC" ? accValue : "0"; 
+            var subAcc = mode === "SUB" ? accValue : "0";
+
+            // Expected PL/SQL Params:
+            // 1: finAcc, 2: Group_Id (l1), 3: ACCOUNT_NAME, 4: parentid (pid), 5: VOUCHER_POST, 6: Group_Name (account_type), 7: ACCOUNT_NO, 8: SUB_ACC, 9: Segment_NAME
+            var reqData = "ACC_MAP_INSERT^" + txtfinAcc + "~" + cmbgp_name + "~" + txtAccName + "~" + parentId + "~" + voPostText + "~" + accType + "~" + txtAccNo + "~" + subAcc + "~" + segmentText + "^1";
+
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    if (data && data.length > 0) {
+                        var status = data[0].STATUS || data[0].status;
+                        
+                        if (status == 1 || status == "1") {
+                            Swal.fire("Account Mapping", "Added Successfully", "success").then(() => {
+                                ClearForm();
+                            });
+                        } else {
+                            Swal.fire("Account Mapping", "FinAccount Number Already Exists", "info");
+                        }
+                    } else {
+                        Swal.fire("Error", "Unexpected response from server.", "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Account Mapping", "Server connection failed.", "error");
+                }
+            });
+        }
+
+        function ClearForm() {
+            $('#txtSearch').val('');
+            $('#cmbAccount').empty().append('<option value="-1">-SELECT-</option>').trigger('change');
+            $('#txtfinAcc').val('');
+            
+            $('#cmbgp_name').val('-1').trigger('change');
+            $('#txtparent_id').val('');
+            $('#txtacc_type').val('-Select-');
+            
+            $('#cmbvo_post').val('-1').trigger('change');
+            $('#cmbSegment').val('-1').trigger('change');
+            
+            $('#rdAccountNo').prop('checked', true);
+            toggleMode();
+        }
+    </script>
+</body>
+</html>
