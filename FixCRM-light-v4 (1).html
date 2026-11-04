@@ -1,1 +1,87 @@
 
+    -- ---------------------- ADD ACCOUNTS VERIFICATION & DROPDOWNS ---------------------- 
+
+    ELSIF p_flag = 'ADD_ACC_GET_NATURE' THEN
+        -- No parameters required
+        OPEN p_as_outresult FOR
+            select a.nature_no, a.accnature_name || ' | ' || chr(32) ||a.nature_no as accnature_name 
+            from account_nature a;
+
+    ELSIF p_flag = 'ADD_ACC_GET_SCHEDULE' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = NATURE_NO
+        OPEN p_as_outresult FOR
+            select a.schedule_no, a.schedule_name || ' | ' || chr(32) ||a.schedule_no as schedule_name 
+            from account_schedule a 
+            where a.nature_no = TO_NUMBER(v_spliter_a(1)) 
+            order by a.schedule_no;
+
+    ELSIF p_flag = 'ADD_ACC_GET_SUBSCHEDULE' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = SHEDULE_NO
+        OPEN p_as_outresult FOR
+            select a.subschedule_no, a.subschedule_name || ' | ' || chr(32) ||a.subschedule_no as subschedule_name 
+            from account_subschedule a 
+            where a.schedule_no = TO_NUMBER(v_spliter_a(1)) 
+            order by a.subschedule_no;
+
+    ELSIF p_flag = 'ADD_ACC_GET_SUBTYPE' THEN
+        -- No parameters required
+        OPEN p_as_outresult FOR
+            select t.status_id, t.description as SubType 
+            from status_master t 
+            where t.module_id=1 and t.option_id=18;
+
+    ELSIF p_flag = 'ADD_ACC_CHECK_PROFILE' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = NATURE_NO
+        -- v_spliter_a(2) = SHEDULE_NO
+        -- v_spliter_a(3) = SUB_SHEDULE_NO
+        OPEN p_as_outresult FOR
+            select count(*) as cnt 
+            from account_profile 
+            where nature_no = TO_NUMBER(v_spliter_a(1)) 
+            and SCHEDULE_NO = TO_NUMBER(v_spliter_a(2)) 
+            and SUBSCHEDULE_NO = TO_NUMBER(v_spliter_a(3));
+
+    ELSIF p_flag = 'ADD_ACC_CHECK_ACCNO' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = ACCOUNT_NO
+        OPEN p_as_outresult FOR
+            select count(*) as cnt 
+            from account_profile 
+            where account_no = TO_NUMBER(v_spliter_a(1));
+
+    ELSIF p_flag = 'ADD_ACC_CHECK_NAME' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = ACCOUNT_NAME
+        OPEN p_as_outresult FOR
+            select count(*) as cnt 
+            from account_profile 
+            where account_name = v_spliter_a(1);
+    
+    -- ---------------------- ADD ACCOUNTS INSERTION ---------------------- 
+
+    ELSIF p_flag = 'ADD_ACC_INSERT_NEW' THEN
+        -- Expected parameters:
+        -- v_spliter_a(1) = ACCOUNTNO (id)
+        -- v_spliter_a(2) = ACCOUNTNAME
+        -- v_spliter_a(3) = SUB_SHEDULE_NO
+        -- v_spliter_a(4) = SHEDULE_NO
+        -- v_spliter_a(5) = NATURE_NO
+        -- v_spliter_a(6) = FIRM_ID
+        -- v_spliter_a(7) = HOSTATUS
+        -- v_spliter_a(8) = USERID
+        
+        insert into account_profile(account_no, account_name, ho_status, subschedule_no, schedule_no, nature_no) 
+        values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(2), 0, TO_NUMBER(v_spliter_a(3)), TO_NUMBER(v_spliter_a(4)), TO_NUMBER(v_spliter_a(5)));
+        
+        insert into account_status 
+        select v_spliter_a(6), b.branch_id, TO_NUMBER(v_spliter_a(1)), TO_NUMBER(v_spliter_a(7)) 
+        from branch_master b;
+        
+        insert into account_profile_dtl (account_no, created_by, created_dt) 
+        values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(8), sysdate);
+
+        OPEN p_as_outresult FOR 
+            SELECT 'Success' AS res, 1 AS status FROM dual;
