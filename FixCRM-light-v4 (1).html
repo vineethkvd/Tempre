@@ -1,1 +1,1637 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using AccountsEntryProperties;
+using AccountsEntryProperties.AccountTransactionProperties;
+using Utilities;
+using AccountsEntryProperties.CashTransferProperties;
+using System.Text.RegularExpressions;
+
+namespace AccountsEntry.AccountsTransactions
+{
+    public partial class AddAccounts : Form
+    {
+         TransactionService.AccountTransactionServicesClient serviceObj = new TransactionService.AccountTransactionServicesClient();
+        ChequeLeavesProperties ObjChequeLeaves = new ChequeLeavesProperties();
+        AccountStatusProperties _AccountStatus = new AccountStatusProperties();
+        AccountProfileProperties _AccountProfile = new AccountProfileProperties();
+        AccountNatureProperties _AccountNature = new AccountNatureProperties();
+        AccountSheduleProperties _AccountShedule = new AccountSheduleProperties();
+        AccountSubSheduleProperties _AccountSubShedule = new AccountSubSheduleProperties();
+        AccountAccProfileProperties _AccProfile = new AccountAccProfileProperties();
+        StatusMasterProperties _SubType = new StatusMasterProperties();
+        SubsidaryMasterProperties objSubsi = new SubsidaryMasterProperties();
+        List<SubsidaryMasterProperties> sublist = new List<SubsidaryMasterProperties>();
+        BranchMasterProperties objBranchMasterProperties = new BranchMasterProperties();
+        List<ChequeLeavesProperties> ListCheque = new List<ChequeLeavesProperties>();
+        public AddAccounts()
+        {
+            InitializeComponent();
+        }
+        private void AddAccounts_Load(object sender, EventArgs e)
+        {
+            
+            FillAccNature();
+           
+        }
+
+
+        #region Functions
+
+        private void FillAccNature()
+        {
+            cmbAccNature.DataSource = serviceObj.GetAccNatureList(_AccountNature).AccNatureList;
+            cmbAccNature.DisplayMember = "NATURE_NAME";
+            cmbAccNature.ValueMember = "NATURE_NO";
+        }
+        private void FillAccShedule()
+        {
+            _AccountShedule.NATURE_NO = Convert.ToInt32(cmbAccNature.SelectedValue);
+            cmbAccShedule.DataSource = serviceObj.GetAccSheduleList(_AccountShedule).AccSheduleList;
+            cmbAccShedule.DisplayMember = "SHEDULE_NAME";
+            cmbAccShedule.ValueMember = "SHEDULE_NO";
+
+        }
+        private void FillAccSubShedule()
+        {
+            _AccountSubShedule.SHEDULE_NO = Convert.ToInt32(cmbAccShedule.SelectedValue);
+            cmbSubShedule.DataSource = serviceObj.GetAccSubSheduleList(_AccountSubShedule).AccSubSheduleList;
+            cmbSubShedule.DisplayMember = "SUB_SHEDULE_NAME";
+            cmbSubShedule.ValueMember = "SUB_SHEDULE_NO";
+        }
+
+        private void FillSubType()
+        {
+            cmbSubType.DataSource = serviceObj.GetSubTypeList(_SubType).AccSubTypeList;
+            cmbSubType.DisplayMember = "DESCRIPTION";
+            cmbSubType.ValueMember = "STATUS_ID";
+        }
+
+        private Boolean CheckAccProfile()
+        {
+            _AccProfile.NATURE_NO = Convert.ToInt32(cmbAccNature.SelectedValue);
+            _AccProfile.SHEDULE_NO = Convert.ToInt32(cmbAccShedule.SelectedValue);
+            _AccProfile.SUB_SHEDULE_NO = Convert.ToInt32(cmbSubShedule.SelectedValue);
+            _AccProfile.ACCOUNTNAME = txtAccName.Text;
+
+            string result = serviceObj.CheckAccProfile(_AccProfile).Success;
+            if (result == "error")
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+
+         public void ClearAllcontrols()
+        {
+            errp.Clear();
+            cmbAccNature.SelectedValue = -1;
+            cmbAccShedule.SelectedValue = -1;
+            cmbSubShedule.SelectedValue = -1;
+            cmbSubType.SelectedValue = -1;
+            txtAccName.Clear();
+            valtxtAcountNo.Clear();
+            lblMsg.Visible = false;
+        }
+
+
+         private void InsertAcc()
+         {
+             
+             if ((txtAccName.Text != ""))
+             {
+                 _AccProfile.FIRM_ID = ConstantGallery.FIRMID;
+                 _AccProfile.NATURE_NO = Convert.ToInt32(cmbAccNature.SelectedValue);
+                 _AccProfile.SHEDULE_NO = Convert.ToInt32(cmbAccShedule.SelectedValue);
+                 _AccProfile.SUB_SHEDULE_NO = Convert.ToInt32(cmbSubShedule.SelectedValue);
+                 _AccProfile.HOSTATUS = Convert.ToInt32(cmbSubType.SelectedValue);
+                 _AccProfile.ACCOUNTNAME = txtAccName.Text.ToString().Trim();
+                 _AccProfile.USERID = ConstantGallery.SESSION_ID;
+                 
+
+                 _AccProfile.ACCOUNTNO = Convert.ToInt32(valtxtAcountNo.Text.Trim());
+
+
+                 try
+                 {
+                     OperationResult Result = serviceObj.InsertNewAccount(_AccProfile);
+                     if (Result.Status == true)
+                     {
+                         GlassMessage.Glass.Show("Saved Successfully.", "New Accounts", MessageBoxIcon.Information);
+                         ClearAllcontrols();
+                     }
+                     else
+                     {
+                         if (Result.ErrorCode == "101")
+                         {
+                             GlassMessage.Glass.Show("Failed. Please Try Again Later", "New Accounts", MessageBoxIcon.Information);
+                         }
+                     }
+                 }
+                 catch (Exception ex)
+                 {
+                     Tracer.HandleException(ex, "btnConfirm_Click", this.Name);
+                     DialogResult dialogResult = GlassMessage.Glass.Show("Unexpected error occurred while performing this operation!." + Environment.NewLine + "Please try again.", "ERROR", MessageBoxIcon.Warning);
+                 }
+             }
+         }
+
+        #endregion
+
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+      
+       
+
+
+        #region ChangeEvents
+
+        private void cmbAccNature_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbAccNature.SelectedIndex > 0)
+            {
+                FillAccShedule();
+                cmbAccShedule.Focus();
+            }
+        }
+
+        private void cmbAccShedule_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbAccShedule.SelectedIndex > 0)
+            {
+                FillAccSubShedule();
+                cmbSubShedule.Focus();   
+            }
+        
+        }
+
+        private void cmbSubShedule_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbSubShedule.SelectedIndex > 0)
+            {
+
+                FillSubType();
+                cmbSubType.Focus();
+
+            }
+        }
+
+        private void cmbSubType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+            
+            if (cmbSubType.SelectedIndex > 0)
+            {
+                txtAccName.Focus();
+            }
+            else if (cmbSubType.SelectedIndex == -1)
+            {
+                GlassMessage.Glass.Show("Sub Type Not Selected.", "Add Accounts", MessageBoxIcon.Information);
+            }
+        }
+
+
+      
+        #endregion
+
+
+
+       
+
+
+
+        
+        private void txtAccName_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            var regex = new Regex(@"[^a-zA-Z0-9\s/\-&()\b]");
+            if (regex.IsMatch(e.KeyChar.ToString()))
+            {
+                e.Handled = true;
+                GlassMessage.Glass.Show("Invalid Symbol " + e.KeyChar, "Add Accounts", MessageBoxIcon.Information);
+            }
+            else
+            {
+
+            }
+        }
+
+
+
+
+
+
+        protected void checkAccName()
+        {
+            string nm = Convert.ToString(txtAccName.Text);
+            if (nm == "")
+            {
+                
+            }
+            else
+            {
+                string s = serviceObj.Chkname(nm);
+                if (s == "error")
+                {
+                    GlassMessage.Glass.Show("Account Name already exist.", "Add Accounts", MessageBoxIcon.Information);
+                    txtAccName.Clear();
+                }
+            }
+        }
+
+
+
+        protected void checkAccNo()
+        {
+            string p;
+
+
+
+            if (valtxtAcountNo.Text == "")
+            {
+
+            }
+            else
+            {
+                long   Ac = Convert.ToInt32(valtxtAcountNo.Text);
+                int r = serviceObj.Chkacc(Ac);
+                if (r == 1)
+                {
+                    GlassMessage.Glass.Show("Account Number already exist.", "Add Accounts", MessageBoxIcon.Information);
+                    valtxtAcountNo.Clear();
+                }
+            }
+        }
+
+
+
+        public Boolean IsValidAll()
+        {
+
+            int a;
+            string[] arr;
+            string st, str, s, sr;
+            //string  str;
+
+                
+                //st = Convert.ToString(cmbAccNature.SelectedValue);
+                str = Convert.ToString(valtxtAcountNo.Text);
+               
+             if ((Convert.ToInt32(cmbAccNature.SelectedValue) == -1) || (cmbAccNature.SelectedValue == null))
+                {
+                    GlassMessage.Glass.Show("Select Account Nature.", "Add Accounts", MessageBoxIcon.Information);
+                    cmbAccNature.Focus();
+                    return false;
+                }
+
+                else if ((Convert.ToInt32(cmbAccShedule.SelectedValue) == -1) || (cmbAccShedule.SelectedValue == null))
+                {
+                    GlassMessage.Glass.Show("Select Account Shedule.", "Add Accounts", MessageBoxIcon.Information);
+                    cmbAccShedule.Focus();
+                    return false;
+                }
+
+                else if ((Convert.ToInt32(cmbSubShedule.SelectedValue) == -1) || (cmbSubShedule.SelectedValue == null))
+                {
+                    GlassMessage.Glass.Show("Select Account Sub Shedule.", "Add Accounts", MessageBoxIcon.Information);
+                    cmbSubShedule.Focus();
+                    return false;
+                }
+
+                else if ((Convert.ToInt32(cmbSubType.SelectedValue) == -1) || (cmbSubType.SelectedValue == null))
+                {
+                    GlassMessage.Glass.Show("Select Sub Type.", "Add Accounts", MessageBoxIcon.Information);
+                    cmbSubType.Focus();
+                    return false;
+                }
+
+                else if (txtAccName.Text == string.Empty || txtAccName.Text == null)
+                {
+                    GlassMessage.Glass.Show("Enter New Account Name.", "Add Accounts", MessageBoxIcon.Information);
+                    txtAccName.Focus();
+                    return false;
+                }
+
+                else if (valtxtAcountNo.Text == string.Empty || valtxtAcountNo.Text == null)
+                {
+                    GlassMessage.Glass.Show("Enter  Account No.", "Add Accounts", MessageBoxIcon.Information);
+                    txtAccName.Focus();
+                    return false;
+                }
+             else if (str == "")
+             {
+                 return false;
+             }
+             else if (str != "")
+             {
+
+                 arr = cmbAccNature.SelectedValue.ToString().Split('|');
+
+                 // s = st.Split('|')[1];
+                 s = arr[0];
+                 s = s.Substring(0, 1);
+                 sr = str.Substring(0, 1);
+                 a = str.Count();
+                 if (a != 5)
+                 {
+                     GlassMessage.Glass.Show("Enter 5 digit  Account No.", "Add Accounts", MessageBoxIcon.Information);
+                     return false;
+                 }
+                 
+                
+
+                 if (s != sr)
+                 {
+                     GlassMessage.Glass.Show("Account number and Account nature are different.", "Add Accounts", MessageBoxIcon.Information);
+                     return false;
+                 }
+                 
+               
+                     return true;
+                 
+               
+
+
+
+             }
+                //else if ((s != sr) && (a != 5))
+                //{
+                //    GlassMessage.Glass.Show("Enter 5 digit  Account No.", "Add Accounts", MessageBoxIcon.Information);
+
+                //    return false;
+                //}
+
+
+                else
+                {
+                    errp.Clear();
+                    CheckAccProfile();
+                    
+                    return true;
+                }
+            }
+        
+        private void valtxtAcountNo_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAccName_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+
+        private void btnConfirm_Click(object sender, EventArgs e)
+        {
+            //int a;
+            //string[] arr;
+            //string st, str, s, sr;
+            //// st = Convert.ToString(cmbAccNature.SelectedValue);
+            //str = Convert.ToString(valtxtAcountNo.Text);
+            //arr = cmbAccNature.SelectedValue.ToString().Split('|');
+            //// s = st.Split('|')[1];
+            //s = arr[0];
+            //s = s.Substring(0, 1);
+            //sr = str.Substring(0, 1);
+            //a = str.Count();
+            // if((s == sr)&&(a == 5)&&(IsValidAll() == true))
+            checkAccNo();
+            checkAccName();
+
+            if (IsValidAll() == true)
+            {
+                InsertAcc();
+            }
+
+
+
+            //else
+            //{
+            //    GlassMessage.Glass.Show("Please fill all the fields.", "Add Accounts", MessageBoxIcon.Information);
+
+            //}
+
+        }
+
+
+       
+    }
+}
+namespace AccountsEntry.AccountsTransactions
+{
+    partial class AddAccounts
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.components = new System.ComponentModel.Container();
+            this.label1 = new System.Windows.Forms.Label();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.panel2 = new System.Windows.Forms.Panel();
+            this.gbChequeDetails = new System.Windows.Forms.GroupBox();
+            this.valtxtAcountNo = new TextValidator.ValTextBox();
+            this.Label14 = new System.Windows.Forms.Label();
+            this.cmbSubType = new System.Windows.Forms.ComboBox();
+            this.cmbSubShedule = new System.Windows.Forms.ComboBox();
+            this.lblMsg = new System.Windows.Forms.Label();
+            this.txtAccName = new System.Windows.Forms.TextBox();
+            this.lblSubShedule = new System.Windows.Forms.Label();
+            this.cmbAccShedule = new System.Windows.Forms.ComboBox();
+            this.lblSubType = new System.Windows.Forms.Label();
+            this.cmbAccNature = new System.Windows.Forms.ComboBox();
+            this.lblAccNature = new System.Windows.Forms.Label();
+            this.lblAccName = new System.Windows.Forms.Label();
+            this.lblAccShedule = new System.Windows.Forms.Label();
+            this.panel4 = new System.Windows.Forms.Panel();
+            this.btnExit = new System.Windows.Forms.Button();
+            this.btnConfirm = new System.Windows.Forms.Button();
+            this.errp = new System.Windows.Forms.ErrorProvider(this.components);
+            this.panel1.SuspendLayout();
+            this.panel2.SuspendLayout();
+            this.gbChequeDetails.SuspendLayout();
+            this.panel4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.errp)).BeginInit();
+            this.SuspendLayout();
+            // 
+            // label1
+            // 
+            this.label1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(182)))), ((int)(((byte)(182)))), ((int)(((byte)(182)))));
+            this.label1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.label1.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(0, 0);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(980, 29);
+            this.label1.TabIndex = 8;
+            this.label1.Text = "Add New Accounts";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.panel2);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel1.Location = new System.Drawing.Point(0, 29);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(980, 460);
+            this.panel1.TabIndex = 10;
+            // 
+            // panel2
+            // 
+            this.panel2.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.panel2.Controls.Add(this.gbChequeDetails);
+            this.panel2.Controls.Add(this.panel4);
+            this.panel2.Location = new System.Drawing.Point(58, 20);
+            this.panel2.Name = "panel2";
+            this.panel2.Size = new System.Drawing.Size(891, 361);
+            this.panel2.TabIndex = 7;
+            // 
+            // gbChequeDetails
+            // 
+            this.gbChequeDetails.Controls.Add(this.valtxtAcountNo);
+            this.gbChequeDetails.Controls.Add(this.Label14);
+            this.gbChequeDetails.Controls.Add(this.cmbSubType);
+            this.gbChequeDetails.Controls.Add(this.cmbSubShedule);
+            this.gbChequeDetails.Controls.Add(this.lblMsg);
+            this.gbChequeDetails.Controls.Add(this.txtAccName);
+            this.gbChequeDetails.Controls.Add(this.lblSubShedule);
+            this.gbChequeDetails.Controls.Add(this.cmbAccShedule);
+            this.gbChequeDetails.Controls.Add(this.lblSubType);
+            this.gbChequeDetails.Controls.Add(this.cmbAccNature);
+            this.gbChequeDetails.Controls.Add(this.lblAccNature);
+            this.gbChequeDetails.Controls.Add(this.lblAccName);
+            this.gbChequeDetails.Controls.Add(this.lblAccShedule);
+            this.gbChequeDetails.Location = new System.Drawing.Point(3, 28);
+            this.gbChequeDetails.Name = "gbChequeDetails";
+            this.gbChequeDetails.Size = new System.Drawing.Size(871, 214);
+            this.gbChequeDetails.TabIndex = 83;
+            this.gbChequeDetails.TabStop = false;
+            // 
+            // valtxtAcountNo
+            // 
+            this.valtxtAcountNo.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.valtxtAcountNo.BackColor = System.Drawing.SystemColors.Window;
+            this.valtxtAcountNo.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.valtxtAcountNo.ErrorMessage = null;
+            this.valtxtAcountNo.Location = new System.Drawing.Point(527, 137);
+            this.valtxtAcountNo.MaxLength = 5;
+            this.valtxtAcountNo.Name = "valtxtAcountNo";
+            this.valtxtAcountNo.Size = new System.Drawing.Size(278, 20);
+            this.valtxtAcountNo.TabIndex = 64;
+            this.valtxtAcountNo.ValidationFormat = TextValidator.ValTextBox.ValidationTypes.Numeric;
+            this.valtxtAcountNo.TextChanged += new System.EventHandler(this.valtxtAcountNo_TextChanged);
+            // 
+            // Label14
+            // 
+            this.Label14.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.Label14.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.Label14.Location = new System.Drawing.Point(436, 137);
+            this.Label14.Name = "Label14";
+            this.Label14.Size = new System.Drawing.Size(88, 16);
+            this.Label14.TabIndex = 63;
+            this.Label14.Text = "Account No :";
+            // 
+            // cmbSubType
+            // 
+            this.cmbSubType.DisplayMember = "Sub";
+            this.cmbSubType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbSubType.FormattingEnabled = true;
+            this.cmbSubType.Location = new System.Drawing.Point(614, 88);
+            this.cmbSubType.Name = "cmbSubType";
+            this.cmbSubType.Size = new System.Drawing.Size(191, 21);
+            this.cmbSubType.TabIndex = 62;
+            this.cmbSubType.SelectedIndexChanged += new System.EventHandler(this.cmbSubType_SelectedIndexChanged);
+            // 
+            // cmbSubShedule
+            // 
+            this.cmbSubShedule.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbSubShedule.FormattingEnabled = true;
+            this.cmbSubShedule.Location = new System.Drawing.Point(211, 90);
+            this.cmbSubShedule.Name = "cmbSubShedule";
+            this.cmbSubShedule.Size = new System.Drawing.Size(191, 21);
+            this.cmbSubShedule.TabIndex = 61;
+            this.cmbSubShedule.SelectedIndexChanged += new System.EventHandler(this.cmbSubShedule_SelectedIndexChanged);
+            // 
+            // lblMsg
+            // 
+            this.lblMsg.AutoSize = true;
+            this.lblMsg.ForeColor = System.Drawing.Color.Red;
+            this.lblMsg.Location = new System.Drawing.Point(247, 74);
+            this.lblMsg.Name = "lblMsg";
+            this.lblMsg.Size = new System.Drawing.Size(0, 13);
+            this.lblMsg.TabIndex = 60;
+            // 
+            // txtAccName
+            // 
+            this.txtAccName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtAccName.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
+            this.txtAccName.Location = new System.Drawing.Point(210, 136);
+            this.txtAccName.Name = "txtAccName";
+            this.txtAccName.Size = new System.Drawing.Size(192, 20);
+            this.txtAccName.TabIndex = 59;
+            this.txtAccName.TextChanged += new System.EventHandler(this.txtAccName_TextChanged);
+            this.txtAccName.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtAccName_KeyPress);
+            // 
+            // lblSubShedule
+            // 
+            this.lblSubShedule.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblSubShedule.Location = new System.Drawing.Point(27, 90);
+            this.lblSubShedule.Name = "lblSubShedule";
+            this.lblSubShedule.Size = new System.Drawing.Size(177, 22);
+            this.lblSubShedule.TabIndex = 58;
+            this.lblSubShedule.Text = "Sub Shedule : ";
+            this.lblSubShedule.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // cmbAccShedule
+            // 
+            this.cmbAccShedule.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbAccShedule.FormattingEnabled = true;
+            this.cmbAccShedule.Location = new System.Drawing.Point(614, 41);
+            this.cmbAccShedule.Name = "cmbAccShedule";
+            this.cmbAccShedule.Size = new System.Drawing.Size(191, 21);
+            this.cmbAccShedule.TabIndex = 1;
+            this.cmbAccShedule.SelectedIndexChanged += new System.EventHandler(this.cmbAccShedule_SelectedIndexChanged);
+            // 
+            // lblSubType
+            // 
+            this.lblSubType.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblSubType.Location = new System.Drawing.Point(480, 88);
+            this.lblSubType.Name = "lblSubType";
+            this.lblSubType.Size = new System.Drawing.Size(114, 22);
+            this.lblSubType.TabIndex = 55;
+            this.lblSubType.Text = "Sub Type :";
+            this.lblSubType.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // cmbAccNature
+            // 
+            this.cmbAccNature.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbAccNature.FormattingEnabled = true;
+            this.cmbAccNature.Location = new System.Drawing.Point(212, 42);
+            this.cmbAccNature.Name = "cmbAccNature";
+            this.cmbAccNature.Size = new System.Drawing.Size(192, 21);
+            this.cmbAccNature.TabIndex = 0;
+            this.cmbAccNature.SelectedIndexChanged += new System.EventHandler(this.cmbAccNature_SelectedIndexChanged);
+            // 
+            // lblAccNature
+            // 
+            this.lblAccNature.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblAccNature.Location = new System.Drawing.Point(98, 41);
+            this.lblAccNature.Name = "lblAccNature";
+            this.lblAccNature.Size = new System.Drawing.Size(108, 22);
+            this.lblAccNature.TabIndex = 52;
+            this.lblAccNature.Text = "Account Nature :";
+            this.lblAccNature.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // lblAccName
+            // 
+            this.lblAccName.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblAccName.Location = new System.Drawing.Point(4, 134);
+            this.lblAccName.Name = "lblAccName";
+            this.lblAccName.Size = new System.Drawing.Size(200, 22);
+            this.lblAccName.TabIndex = 43;
+            this.lblAccName.Text = "New Account Name : ";
+            this.lblAccName.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // lblAccShedule
+            // 
+            this.lblAccShedule.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblAccShedule.Location = new System.Drawing.Point(466, 42);
+            this.lblAccShedule.Name = "lblAccShedule";
+            this.lblAccShedule.Size = new System.Drawing.Size(128, 22);
+            this.lblAccShedule.TabIndex = 44;
+            this.lblAccShedule.Text = "Account Shedule :";
+            this.lblAccShedule.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // panel4
+            // 
+            this.panel4.Controls.Add(this.btnExit);
+            this.panel4.Controls.Add(this.btnConfirm);
+            this.panel4.Location = new System.Drawing.Point(2, 234);
+            this.panel4.Name = "panel4";
+            this.panel4.Size = new System.Drawing.Size(871, 62);
+            this.panel4.TabIndex = 84;
+            // 
+            // btnExit
+            // 
+            this.btnExit.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnExit.Location = new System.Drawing.Point(455, 14);
+            this.btnExit.Name = "btnExit";
+            this.btnExit.Size = new System.Drawing.Size(79, 29);
+            this.btnExit.TabIndex = 1;
+            this.btnExit.Text = "Exit";
+            this.btnExit.UseVisualStyleBackColor = true;
+            this.btnExit.Click += new System.EventHandler(this.btnExit_Click);
+            // 
+            // btnConfirm
+            // 
+            this.btnConfirm.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnConfirm.Location = new System.Drawing.Point(371, 13);
+            this.btnConfirm.Name = "btnConfirm";
+            this.btnConfirm.Size = new System.Drawing.Size(79, 29);
+            this.btnConfirm.TabIndex = 0;
+            this.btnConfirm.Text = "Confirm";
+            this.btnConfirm.UseVisualStyleBackColor = true;
+            this.btnConfirm.Click += new System.EventHandler(this.btnConfirm_Click);
+            // 
+            // errp
+            // 
+            this.errp.ContainerControl = this;
+            // 
+            // AddAccounts
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(980, 489);
+            this.Controls.Add(this.panel1);
+            this.Controls.Add(this.label1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Name = "AddAccounts";
+            this.Text = "Add Accounts";
+            this.Load += new System.EventHandler(this.AddAccounts_Load);
+            this.panel1.ResumeLayout(false);
+            this.panel2.ResumeLayout(false);
+            this.gbChequeDetails.ResumeLayout(false);
+            this.gbChequeDetails.PerformLayout();
+            this.panel4.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.errp)).EndInit();
+            this.ResumeLayout(false);
+
+        }
+
+        #endregion
+
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.GroupBox gbChequeDetails;
+        private System.Windows.Forms.ComboBox cmbAccNature;
+        private System.Windows.Forms.Label lblAccNature;
+        private System.Windows.Forms.ComboBox cmbAccShedule;
+        private System.Windows.Forms.Label lblAccName;
+        private System.Windows.Forms.Label lblAccShedule;
+        private System.Windows.Forms.Panel panel4;
+        private System.Windows.Forms.Button btnExit;
+        private System.Windows.Forms.Button btnConfirm;
+        private System.Windows.Forms.Label lblSubType;
+        private System.Windows.Forms.ErrorProvider errp;
+       
+     
+        private System.Windows.Forms.Label lblSubShedule;
+        private System.Windows.Forms.TextBox txtAccName;
+        private System.Windows.Forms.Label lblMsg;
+        private System.Windows.Forms.ComboBox cmbSubShedule;
+        private System.Windows.Forms.ComboBox cmbSubType;
+        private TextValidator.ValTextBox valtxtAcountNo;
+        internal System.Windows.Forms.Label Label14;
+    }
+}
+
+          using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using AccountsEntryProperties.AccountTransactionProperties;
+using DataAccessLayer;
+using AccountsEntryBLL;
+using System.Data;
+using System.Data.Common;
+using AccountsEntryProperties;
+
+
+namespace AccountsEntryBLL.AccountEntryManager
+{
+    public class AccountsManager
+    {
+        DbConnectionHandler dbobj = new DbConnectionHandler();
+        public AccountStatusProperties _AccountStatus = new AccountStatusProperties();
+                public AccountProfileProperties _AccountProfile = new AccountProfileProperties();
+        public SubsidaryMasterProperties _SubsidaryMaster = new SubsidaryMasterProperties();
+        public BankAccountsEntryProperties _BankAccount = new BankAccountsEntryProperties();
+        SubsidaryMasterProperties objSubsi = new SubsidaryMasterProperties();
+        public AccountAccProfileProperties _AccProfile = new AccountAccProfileProperties();
+        public AccountSheduleProperties _AccountShedule = new AccountSheduleProperties();
+        public AccountSubSheduleProperties _AccountSubShedule = new AccountSubSheduleProperties();
+        public AccountNatureProperties _AccountNature = new AccountNatureProperties();
+        public StatusMasterProperties _SubType = new StatusMasterProperties();
+        public List<AccountProfileProperties> GetAccountList()
+        {
+            DataTable dt = new DataTable();
+            List<AccountProfileProperties> profile = new List<AccountProfileProperties>();
+        string sql;
+
+
+
+        if (_AccountStatus.SEGMENT_ID == 1)
+        {
+
+
+            if (_AccountStatus.STATUSID == 1)
+            {
+                sql = "select  distinct a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  from account_profile a, account_status b  where b.firm_id ='" + _AccountStatus.FIRMID + "'    and a.account_no=b.account_no and b.status_id in (2,3) order by a.account_name";
+
+
+            }
+
+            else
+            {
+                sql = "select   a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  from account_profile a, account_status b  where b.firm_id ='" + _AccountStatus.FIRMID + "'   and b.branch_id = '" + _AccountStatus.BRANCHID + "' and a.account_no=b.account_no and b.status_id in (2,3) order by a.account_name";
+
+
+            }
+        }
+        else
+        {
+            if (_AccountStatus.STATUSID == 1)
+            {
+                sql = "select   distinct a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  from account_profile a, account_status b  where b.firm_id ='" + _AccountStatus.FIRMID + "'    and a.account_no=b.account_no and b.status_id in (2,3) order by a.account_no";
+
+
+            }
+
+            else
+            {
+                sql = "select    a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  from account_profile a, account_status b  where b.firm_id ='" + _AccountStatus.FIRMID + "'   and b.branch_id = '" + _AccountStatus.BRANCHID + "' and a.account_no=b.account_no and b.status_id in (2,3) order by a.account_no";
+
+
+            }
+        }
+
+
+              
+              dt = dbobj.GetDataTable(sql);
+                if (dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        DataRow dRow = dt.Rows[i];
+                        profile.Add(new AccountProfileProperties
+                        {
+                            ACCOUNTNAME = Convert.ToString(dRow["name"]),
+                            ACCOUNTNO = Convert.ToInt32(dRow["account_no"]),
+                            HOSTATUS = Convert.ToInt32(dRow["status_id"])
+
+                        });
+
+                    }
+                    profile.Insert(0, new AccountProfileProperties
+                    {
+                        ACCOUNTNAME = "-SELECT-",
+                        ACCOUNTNO = -1
+                    });
+                    return profile;
+                }
+                else
+                {
+                    profile = null;
+                    return profile;
+                }
+            
+         
+        }
+
+
+        public List<AccountProfileProperties> GetAllRequest()
+        {
+            DataTable dt = new DataTable();
+            List<AccountProfileProperties> profile = new List<AccountProfileProperties>();
+
+
+            if (_AccountStatus.BRANCHID == 0)
+            {
+                dt = dbobj.GetDataTable(" SELECT  t.req_id as account_no, t.req_id||  ' | ' ||  chr(32) ||t.cheque_no||  ' | ' ||  chr(32) ||t.cheque_date||  ' | ' ||  chr(32) ||t.cheque_amount||  ' | ' ||  chr(32) ||t.bank_code ||  ' | ' ||  chr(32) ||t.bank_name ||  ' | ' ||  chr(32) ||t.descr as AccountName from bank_branch_request t where t.status_id=0  and  t.firm_id ='" + _AccountStatus.FIRMID + "'  and  t.segment_id ='" + _AccountStatus.SEGMENT_ID + "'   order by  t.req_id");
+
+            }
+
+                if (dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        DataRow dRow = dt.Rows[i];
+                        profile.Add(new AccountProfileProperties
+                        {
+                            ACCOUNTNAME = Convert.ToString(dRow["AccountName"]),
+                            ACCOUNTNO = Convert.ToInt32(dRow["account_no"])
+                            //INVOICE = (byte[])dRow["INVOICE"]
+                        });
+
+                    }
+                    profile.Insert(0, new AccountProfileProperties
+                    {
+                        ACCOUNTNAME = "-SELECT-",
+                        ACCOUNTNO = -1
+                    });
+                    return profile;
+                }
+                else
+                {
+                    profile.Insert(0, new AccountProfileProperties
+                    {
+                        ACCOUNTNAME = "-SELECT-",
+                        ACCOUNTNO = -1
+                    });
+                   
+                    return profile;
+                }
+           
+        }
+
+        public List<AccountProfileProperties> GetAllRequestByReqId()
+        {
+            DataTable dt = new DataTable();
+            List<AccountProfileProperties> profile = new List<AccountProfileProperties>();
+
+
+
+
+            dt = dbobj.GetDataTable(" SELECT  t.req_id as account_no,t.INVOICE  from bank_branch_request t where t.req_id=" + _AccountStatus.ACCOUNTNO + "");
+
+
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new AccountProfileProperties
+                    {
+                         ACCOUNTNO = Convert.ToInt32(dRow["account_no"]),
+                        INVOICE = (byte[])dRow["INVOICE"]
+                    });
+
+                }
+                //profile.Insert(0, new AccountProfileProperties
+                //{
+                //   INVOICE =null
+                //});
+                return profile;
+            }
+            else
+            {
+                profile.Insert(0, new AccountProfileProperties
+                {
+                    ACCOUNTNAME = "-SELECT-",
+                    ACCOUNTNO = -1
+                });
+
+                return profile;
+            }
+        }
+
+
+
+        public List<AccountProfileProperties> GetBranchRequestByReqId()
+        {
+            DataTable dt = new DataTable();
+            List<AccountProfileProperties> profile = new List<AccountProfileProperties>();
+
+
+
+
+            dt = dbobj.GetDataTable(" SELECT  t.branch_id,t.req_id  from bank_branch_request t where t.req_id=" + _AccountStatus.ACCOUNTNO + "");
+
+
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new AccountProfileProperties
+                    {
+                        BRANCHID = Convert.ToInt32(dRow["branch_id"]),
+                        ACCOUNTNO = Convert.ToInt32(dRow["req_id"])
+                       
+                    });
+
+                }
+                //profile.Insert(0, new AccountProfileProperties
+                //{
+                //   INVOICE =null
+                //});
+                return profile;
+            }
+            else
+            {
+                profile.Insert(0, new AccountProfileProperties
+                {
+                    ACCOUNTNAME = "-SELECT-",
+                    ACCOUNTNO = -1
+                });
+
+                return profile;
+            }
+        }
+
+
+
+
+
+
+
+
+        public List<SubsidaryMasterProperties> GetSubAccountsList(SubsidaryMasterProperties objSubsi)
+        {
+            DataTable dt = new DataTable();
+            List<SubsidaryMasterProperties> profile = new List<SubsidaryMasterProperties>();
+            if (objSubsi.OPTION == "Branch")
+            {
+                string sql;
+
+                if (_SubsidaryMaster.STATUS_ID == 1)
+                {
+                    sql = " SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName from subsidary_master where parent_acc=" + _SubsidaryMaster.PARENT_ACC + "     and firm_id=" + _SubsidaryMaster.FIRM_ID + "  and  status_id=1     group by  account_no, account_name,firm_id  order by account_name";
+                }
+                else
+                {
+                    sql = " SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName from subsidary_master where parent_acc=" + _SubsidaryMaster.PARENT_ACC + "   and branch_id=" + _SubsidaryMaster.BRANCH_ID + "  and firm_id=" + _SubsidaryMaster.FIRM_ID + "  and  status_id=1 order by account_name";
+                }
+                dt = dbobj.GetDataTable(sql);
+                if (dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        DataRow dRow = dt.Rows[i];
+                        profile.Add(new SubsidaryMasterProperties
+                        {
+                            ACCOUNT_NAME = Convert.ToString(dRow["SubAccountName"]),
+                            ACCOUNT_NO = Convert.ToInt32(dRow["account_no"])
+
+                        });
+
+                    }
+                    profile.Insert(0, new SubsidaryMasterProperties
+                    {
+                        ACCOUNT_NAME = "-SELECT-",
+                        ACCOUNT_NO = -1
+                    });
+                    return profile;
+                }
+                else
+                {
+                    profile.Insert(0, new SubsidaryMasterProperties
+                    {
+                        ACCOUNT_NAME = "-SELECT-",
+                        ACCOUNT_NO = -1
+                    });
+                    //profile = null;
+                    return profile;
+                }
+            }//condition endhere
+            else if (objSubsi.OPTION == "All")
+            {
+                string sql;
+                sql = " SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName from subsidary_master where parent_acc=" + _SubsidaryMaster.PARENT_ACC + "     and firm_id=" + _SubsidaryMaster.FIRM_ID + "  and  status_id=1     group by  account_no, account_name,firm_id  order by account_name";
+                dt = dbobj.GetDataTable(sql);
+                if (dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        DataRow dRow = dt.Rows[i];
+                        profile.Add(new SubsidaryMasterProperties
+                        {
+                            ACCOUNT_NAME = Convert.ToString(dRow["SubAccountName"]),
+                            ACCOUNT_NO = Convert.ToInt32(dRow["account_no"])
+
+                        });
+
+                    }
+                    profile.Insert(0, new SubsidaryMasterProperties
+                    {
+                        ACCOUNT_NAME = "-SELECT-",
+                        ACCOUNT_NO = -1
+                    });
+                    return profile;
+                }
+                else
+                {
+                    profile.Insert(0, new SubsidaryMasterProperties
+                    {
+                        ACCOUNT_NAME = "-SELECT-",
+                        ACCOUNT_NO = -1
+                    });
+                    //profile = null;
+                    return profile;
+                }
+            }
+            else
+            {
+                profile.Insert(0, new SubsidaryMasterProperties
+                {
+                    ACCOUNT_NAME = "-SELECT-",
+                    ACCOUNT_NO = -1
+                });
+                //profile = null;
+                return profile;
+            }
+        }
+
+
+
+
+        public string InsertSubAccount(SubsidaryMasterProperties objSubsi)
+        {
+            List<string> _CMD = new List<string>();
+            _CMD.Clear();
+            if (objSubsi.OPTION == "Branch")
+            {
+                string query = "Select CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN " + (_SubsidaryMaster.PARENT_ACC) + "+1 ELSE MAX(ACCOUNT_NO)+1 END from subsidary_master where PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'";
+                int id = Convert.ToInt32(dbobj.ExecuteScalar(query, null, CommandType.Text, true));
+                _CMD.Add("insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) values(" + _SubsidaryMaster.FIRM_ID + "," + _SubsidaryMaster.BRANCH_ID + "," + _SubsidaryMaster.PARENT_ACC + ",'" + id + "','" + _SubsidaryMaster.ACCOUNT_NAME + "',0,'C',1,0)");
+
+
+
+                bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                if (_value == true)
+                {
+                    _CMD.Clear();
+                    return "Success";
+
+                }
+                else
+                {
+                    _CMD.Clear();
+                    return "Error";
+                }
+            }
+            else if (objSubsi.OPTION == "All")
+            {
+                if (_SubsidaryMaster.SUB_ID == 0)
+                {
+                    string query = "Select CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN " + (_SubsidaryMaster.PARENT_ACC) + "+1 ELSE MAX(ACCOUNT_NO)+1 END from subsidary_master where PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'";
+                    int id = Convert.ToInt32(dbobj.ExecuteScalar(query, null, CommandType.Text, true));
+                    _CMD.Add("insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) SELECT a.FIRM_ID,a.BRANCH_ID," + _SubsidaryMaster.PARENT_ACC + ",'" + id + "','" + _SubsidaryMaster.ACCOUNT_NAME + "',0,'C',1,0 from active_firms a inner join branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = " + _SubsidaryMaster.FIRM_ID);
+                    _CMD.Add("insert into subsidary_mst_modify(PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,MODIFIED_BY,MODIFIED_DT) values('" + _SubsidaryMaster.PARENT_ACC + "','" + id + "','" + _SubsidaryMaster.ACCOUNT_NAME + "','" + _SubsidaryMaster.USERID + "',sysdate)");
+                
+                }
+                else
+                {
+                    _CMD.Add("insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) SELECT a.FIRM_ID,a.BRANCH_ID," + _SubsidaryMaster.PARENT_ACC + ",'" + _SubsidaryMaster.SUB_ID + "','" + _SubsidaryMaster.ACCOUNT_NAME + "',0,'C',1,0 from active_firms a inner join branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = " + _SubsidaryMaster.FIRM_ID);
+                   
+                }
+
+                bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                if (_value == true)
+                {
+                    _CMD.Clear();
+                    return "Success";
+
+                }
+                else
+                {
+                    _CMD.Clear();
+                    return "Error";
+                }
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+            }
+        
+        }
+        public string UpdatetSubAccount(SubsidaryMasterProperties objSubsi)
+        {
+            List<string> _CMD = new List<string>();
+            _CMD.Clear();
+            if (objSubsi.OPTION == "Branch")
+            {
+
+                _CMD.Add("update subsidary_master set ACCOUNT_NAME='" + _SubsidaryMaster.ACCOUNT_NAME + "'where ACCOUNT_NO='" + _SubsidaryMaster.ACCOUNT_NO + "' and PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'and BRANCH_ID='"+_SubsidaryMaster.BRANCH_ID+"'");
+
+
+
+                bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                if (_value == true)
+                {
+                    _CMD.Clear();
+                    return "Success";
+
+                }
+                else
+                {
+                    _CMD.Clear();
+                    return "Error";
+                }
+            }
+            else if (objSubsi.OPTION == "All")
+            {
+
+                _CMD.Add("INSERT INTO subsidary_mst_modify_his (parent_acc, account_no, account_name, modified_by, modified_dt) " + "SELECT t.parent_acc, t.account_no, t.account_name, t.modified_by, t.modified_dt " +  "FROM subsidary_mst_modify t " + "WHERE t.parent_acc='" + _SubsidaryMaster.PARENT_ACC + "' AND t.account_no='" + _SubsidaryMaster.ACCOUNT_NO + "'");
+
+                if (_SubsidaryMaster.SUB_ID == 0)
+                {
+                    _CMD.Add("UPDATE subsidary_master SET ACCOUNT_NAME='" + _SubsidaryMaster.ACCOUNT_NAME + "' " +  "WHERE ACCOUNT_NO='" + _SubsidaryMaster.ACCOUNT_NO + "' AND PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'");
+
+                    _CMD.Add("UPDATE subsidary_mst_modify SET ACCOUNT_NAME='" + _SubsidaryMaster.ACCOUNT_NAME + "', MODIFIED_DT=sysdate, MODIFIED_BY='" + _SubsidaryMaster.USERID + "' " + "WHERE ACCOUNT_NO='" + _SubsidaryMaster.ACCOUNT_NO + "' AND PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'");
+                }
+                else
+                {
+                    _CMD.Add("UPDATE subsidary_master SET ACCOUNT_NAME='" + _SubsidaryMaster.ACCOUNT_NAME + "', ACCOUNT_NO=" + _SubsidaryMaster.SUB_ID + " " + "WHERE ACCOUNT_NO='" + _SubsidaryMaster.ACCOUNT_NO + "' AND PARENT_ACC='" + _SubsidaryMaster.PARENT_ACC + "'");
+                }
+
+                bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+                if (_value == true)
+                {
+                    _CMD.Clear();
+                    return "Success";
+
+                }
+                else
+                {
+                    _CMD.Clear();
+                    return "Error";
+                }
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+            }
+        }
+
+        public string CheckAcc()
+        {
+
+            string result = "", sql = "";
+
+            sql = "select count(*) from subsidary_master where parent_acc='" + _SubsidaryMaster.PARENT_ACC + "' and STATUS_ID=1";
+            int id = Convert.ToInt32(dbobj.ExecuteScalar(sql, null, CommandType.Text, true));
+
+            if (id > 0)
+            {
+                result = "success";
+            }
+            else
+            {
+                result = "error";
+            }
+
+            return result;
+
+        }
+
+        public string CheckAccProfile()
+        {
+
+            string result = "", sql = "";
+
+            sql = "select count(*) from account_profile where nature_no ='" + _AccProfile.NATURE_NO + "' and SCHEDULE_NO ='" + _AccProfile.SHEDULE_NO + "' and SUBSCHEDULE_NO ='" + _AccProfile.SUB_SHEDULE_NO + "' ";
+            int id = Convert.ToInt32(dbobj.ExecuteScalar(sql, null, CommandType.Text, true));
+
+            if (id > 0)
+            {
+                result = "success";
+            }
+            else
+            {
+                result = "error";
+            }
+
+            return result;
+
+        }
+
+        public List<AccountNatureProperties> GetAccNatureList()
+        {
+            DataTable dt = new DataTable();
+            List<AccountNatureProperties> profile = new List<AccountNatureProperties>();
+
+            string sql = " select a.nature_no, a.accnature_name || ' | ' || chr(32) ||a.nature_no as accnature_name from account_nature a ";
+
+
+            dt = dbobj.GetDataTable(sql);
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new AccountNatureProperties
+                    {
+                        NATURE_NAME = Convert.ToString(dRow["accnature_name"]),
+                        NATURE_NO = Convert.ToInt32(dRow["nature_no"]),
+
+                    });
+
+                }
+                profile.Insert(0, new AccountNatureProperties
+                {
+                    NATURE_NAME = "-SELECT-",
+                    NATURE_NO = -1
+                });
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+        }
+
+
+        public List<AccountSheduleProperties> GetAccSheduleList()
+        {
+            DataTable dt = new DataTable();
+            List<AccountSheduleProperties> profile = new List<AccountSheduleProperties>();
+
+            string sql = " select a.schedule_no, a.schedule_name || ' | ' || chr(32) ||a.schedule_no as schedule_name from account_schedule a where a.nature_no = " + _AccountShedule.NATURE_NO + " order by a.schedule_no  ";
+
+
+            dt = dbobj.GetDataTable(sql);
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new AccountSheduleProperties
+                    {
+                        SHEDULE_NAME = Convert.ToString(dRow["schedule_name"]),
+                        SHEDULE_NO = Convert.ToInt32(dRow["schedule_no"]),
+
+                    });
+
+                }
+                profile.Insert(0, new AccountSheduleProperties
+                {
+                    SHEDULE_NAME = "-SELECT-",
+                    SHEDULE_NO = -1
+                });
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+        }
+
+
+        public List<AccountSubSheduleProperties> GetAccSubSheduleList()
+        {
+            DataTable dt = new DataTable();
+            List<AccountSubSheduleProperties> profile = new List<AccountSubSheduleProperties>();
+
+            string sql = " select a.subschedule_no, a.subschedule_name || ' | ' || chr(32) ||a.subschedule_no as subschedule_name from account_subschedule a where a.schedule_no = " + _AccountSubShedule.SHEDULE_NO + " order by a.subschedule_no  ";
+
+
+            dt = dbobj.GetDataTable(sql);
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new AccountSubSheduleProperties
+                    {
+                        SUB_SHEDULE_NAME = Convert.ToString(dRow["subschedule_name"]),
+                        SUB_SHEDULE_NO = Convert.ToInt32(dRow["subschedule_no"]),
+
+                    });
+
+                }
+                profile.Insert(0, new AccountSubSheduleProperties
+                {
+                    SUB_SHEDULE_NAME = "-SELECT-",
+                    SUB_SHEDULE_NO = -1
+                });
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+        }
+
+
+        public List<StatusMasterProperties> GetSubTypeList()
+        {
+            DataTable dt = new DataTable();
+            List<StatusMasterProperties> profile = new List<StatusMasterProperties>();
+
+            string sql = "select t.status_id, t.description as SubType from status_master t where t.module_id=1 and t.option_id=18";
+
+            dt = dbobj.GetDataTable(sql);
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new StatusMasterProperties
+                    {
+                        DESCRIPTION = Convert.ToString(dRow["SubType"]),
+                        STATUS_ID = Convert.ToInt32(dRow["status_id"]),
+
+                    });
+
+                }
+                profile.Insert(0, new StatusMasterProperties
+                {
+                    DESCRIPTION = "-SELECT-",
+                    STATUS_ID = -1
+                });
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+        }
+
+        public string InsertNewAccount()
+        {
+            List<string> _CMD = new List<string>();
+            _CMD.Clear();
+
+            string query = "Select MAX(ACCOUNT_NO)+1 from account_profile where nature_no ='" + _AccProfile.NATURE_NO + "'and schedule_no ='" + _AccProfile.SHEDULE_NO + "'and subschedule_no='" + _AccProfile.SUB_SHEDULE_NO + "'";
+            //int id = Convert.ToInt32(dbobj.ExecuteScalar(query, null, CommandType.Text, true));
+
+            int id = _AccProfile.ACCOUNTNO;
+
+            _CMD.Add("insert into account_profile(account_no,account_name,ho_status,subschedule_no,schedule_no,nature_no) values(" + id + ", '" + _AccProfile.ACCOUNTNAME + "', 0," + _AccProfile.SUB_SHEDULE_NO + "," + _AccProfile.SHEDULE_NO + "," + _AccProfile.NATURE_NO + ") ");
+            //" + _AccProfile.HOSTATUS + "
+            _CMD.Add("insert into account_status select '" + _AccProfile.FIRM_ID + "',b.branch_id, " + id + ", " + _AccProfile.HOSTATUS + " from branch_master b ");
+            
+            _CMD.Add("insert into account_profile_dtl (account_no,created_by,created_dt) values(" + id + ",'"+_AccProfile.USERID+"',sysdate)");
+
+            bool _value = dbobj.ExecuteQuery(_CMD.ToArray(), null, CommandType.Text, true);
+            if (_value == true)
+            {
+                _CMD.Clear();
+                return "Success";
+            }
+            else
+            {
+                _CMD.Clear();
+                return "Error";
+            }
+        }
+
+        public int Chkacc(long Ac)
+        {
+
+            string sql = "";
+            int j;
+
+            sql = "select * from account_profile where account_no ='" + Ac + "' ";
+            int id = Convert.ToInt32(dbobj.ExecuteScalar(sql, null, CommandType.Text, true));
+
+            if (id > 0)
+            {
+                j = 1;
+            }
+            else
+            {
+                j = 0;
+            }
+
+            return j;
+
+        }
+
+
+        public string Chkname(string nm)
+        {
+
+            string sql = "";
+            string k;
+
+            sql = "select * from account_profile where account_name ='" + nm + "' ";
+            int id = Convert.ToInt32(dbobj.ExecuteScalar(sql, null, CommandType.Text, true));
+
+            if (id > 0)
+            {
+                k = "error";
+            }
+            else
+            {
+                k = "success";
+            }
+
+            return k;
+
+        }
+
+
+        public string GetName()
+        {
+            string sql;
+            sql = "select ACCOUNT_NAME from subsidary_master where ACCOUNT_NO='" + _SubsidaryMaster.ACCOUNT_NO + "' and PARENT_ACC='"+_SubsidaryMaster.PARENT_ACC+"' and STATUS_ID=1";
+            DataTable dt = dbobj.GetDataTable(sql, null, CommandType.Text, true);
+            if (dt.Rows.Count == 0)
+            {
+                return "error";
+            }
+            else
+            {
+
+                string name = dt.Rows[0][0].ToString();
+                return name;
+            }
+
+        }
+        public string GetExist()
+        {
+            string result = "", sql = "";
+
+            sql = "select count(*) from subsidary_master where parent_acc='" + _SubsidaryMaster.PARENT_ACC + "' and STATUS_ID=1 and account_name='" + _SubsidaryMaster.ACCOUNT_NAME + "'";
+            int id = Convert.ToInt32(dbobj.ExecuteScalar(sql, null, CommandType.Text, true));
+
+            if (id > 0)
+            {
+                result = "error";
+            }
+            else
+            {
+                result = "success";
+            }
+
+            return result;
+        }
+        public List<BankAccountsEntryProperties> GetBankList()
+        {
+            DataTable dt = new DataTable();
+            List<BankAccountsEntryProperties> profile = new List<BankAccountsEntryProperties>();
+
+            dt = dbobj.GetDataTable("select t.name bankName,t.bank_id bankID from bank t order by  t.name");
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new BankAccountsEntryProperties
+                    {
+                        bankName = Convert.ToString(dRow["bankName"]),
+                        bankID = Convert.ToInt32(dRow["bankID"]),
+
+                    });
+
+                }
+                profile.Insert(0, new BankAccountsEntryProperties
+                {
+                    bankName = "-SELECT-",
+                    bankID = -1
+                });
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+
+
+        }
+
+        public List<BankAccountsEntryProperties> IFSCCodeSearch()
+        {
+            DataTable dt = new DataTable();
+            List<BankAccountsEntryProperties> profile = new List<BankAccountsEntryProperties>();
+            if (_BankAccount.IFSCSearchStatus == 0)
+                dt = dbobj.GetDataTable("select t.bankname Bank, t.ifsc_code IFSCCode,t.branch Branch,t.district District,t.state State from neft_bank_mst t where t.bank_id='" + _BankAccount.Bank_ID + "' order by t.branch");
+            else if (_BankAccount.IFSCSearchStatus == 1)
+                dt = dbobj.GetDataTable("select t.bankname Bank, t.ifsc_code IFSCCode,t.branch Branch,t.district District,t.state State from neft_bank_mst t where t.bank_id='" + _BankAccount.Bank_ID + "'  and upper(t.branch) like '%" + _BankAccount.Branch + "%' order by t.branch");
+            else
+                dt = dbobj.GetDataTable("select t.bankname Bank, t.ifsc_code IFSCCode,t.branch Branch,t.district District,t.state State from neft_bank_mst t where t.bank_id='" + _BankAccount.Bank_ID + "'   and upper(t.ifsc_code) like '%" + _BankAccount.IFSCCode + "%' order by t.branch");
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    profile.Add(new BankAccountsEntryProperties
+                    {
+                        Bank = Convert.ToString(dRow["Bank"]),
+                        IFSCCode = Convert.ToString(dRow["IFSCCode"]),
+                        Branch = Convert.ToString(dRow["Branch"]),
+                        State = Convert.ToString(dRow["State"]),
+                        District = Convert.ToString(dRow["District"]),
+                    });
+
+                }
+                return profile;
+            }
+            else
+            {
+                profile = null;
+                return profile;
+            }
+
+
+        }
+  
+
+        public string InsertBankDetails()
+        {
+            TransactionManager transctManger = new TransactionManager();
+            DateTime CurrentDateTime = transctManger.GetDateTime(_BankAccount.BRANCH_ID);
+            DataTable dt = dbobj.GetDataTable("Select CASE WHEN MAX(BANK_DTL_ID) IS NULL THEN 1 ELSE MAX(BANK_DTL_ID)+1 end from branch_bank_dtl t", null, CommandType.Text, true);
+            int BRANCH_BANK_DTL_ID = Convert.ToInt32(dt.Rows[0].ItemArray[0].ToString());
+            int Result = Convert.ToInt32(dbobj.ExecuteQuery("insert into branch_bank_dtl(BANK_DTL_ID,FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,BANK_ACCNO,IFSC_CODE,TRA_DT) values('" + BRANCH_BANK_DTL_ID + "','" + _BankAccount.FIRM_ID + "','" + _BankAccount.BRANCH_ID + "','" + _BankAccount.PARENT_ACC + "','" + _BankAccount.ACCOUNT_NO + "','" + _BankAccount.BANK_ACCNO + "','" + _BankAccount.IFSCCode + "',to_date('" + CurrentDateTime + "','MM/DD/YYYY HH:MI:SS AM'))", null, CommandType.Text));
+            if (Result > 0)
+            {
+                return "Success";
+            }
+            else
+            {
+                return "Error";
+            }
+        }
+        public List<BankAccountsEntryProperties> BankAccExistCheck()
+        {
+            DataTable dt;
+            dt = dbobj.GetDataTable("select BANK_ACCNO from branch_bank_dtl where firm_id='" + _BankAccount.FIRM_ID + "' and BRANCH_ID='" + _BankAccount.BRANCH_ID + "' and ACCOUNT_NO='" + _BankAccount.ACCOUNT_NO + "'", null, CommandType.Text, true);
+            List<BankAccountsEntryProperties> obj1 = new List<BankAccountsEntryProperties>();
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    DataRow dRow = dt.Rows[i];
+                    obj1.Add(new BankAccountsEntryProperties
+                    {
+                        BANK_ACCNO = Convert.ToString(dRow["BANK_ACCNO"]),
+                    });
+                }
+            }
+            return obj1;
+        }
+        public int HOAuthorizationValidation()
+        {
+            int flag;
+            flag = Convert.ToInt32(dbobj.ExecuteScalar("select t.parmtr_value from general_parameter t where t.firm_id=1 and t.parmtr_id=197 and t.module_id=11", null, CommandType.Text));
+            return flag;
+        }     
+        }
+
+    }
 
