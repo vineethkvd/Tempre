@@ -1,1 +1,331 @@
 
+Based on the visual evidence from your IDE screenshots (file "454ce3c0-74c2-4c5f-a366-8601a275850f" and file "4aeb3f56-10b6-49a1-95aa-2f6f07c52232"), you are encountering Razor syntax compilation errors (CS1501: No overload for method 'Write' takes 0 arguments).
+This happens because the Razor engine interprets @ as the start of server-side C# code. In JavaScript string literals (like your Regex in validateSpecialChars), the @ symbol must be escaped.
+Here is the fully corrected view. I have escaped the @ symbol inside the Regex by using @@, and ensured all JavaScript template literals avoid Razor conflicts.
+@{
+    ViewData["Title"] = "Map Branch";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MAP BRANCH</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container-css {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #f4f6f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border: 1px solid #b0bec5;
+        }
+
+        .table-custom th {
+            background-color: #85c1e9 !important;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+
+        .table-custom td {
+            border: 1px solid #b0bec5;
+            padding: 12px 15px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .label-cell {
+            text-align: right;
+            font-weight: bold;
+            width: 35%;
+            background-color: #fdfdfd;
+        }
+
+        .input-cell {
+            width: 65%;
+        }
+
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #999;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 13px;
+            width: 80%;
+            background-color: #ffffff;
+        }
+
+        .form-control-sm:focus, .form-select-sm:focus {
+            background-color: #f1f8ff;
+            border-color: #0066cc;
+            outline: none;
+        }
+
+        .btn-action {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            font-weight: bold;
+            padding: 6px 20px;
+            min-width: 100px;
+        }
+
+        .btn-action:hover {
+            background-color: #1a252f;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th colspan="2">MAP BRANCH</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Select Branch :</td>
+                    <td class="input-cell">
+                        <select id="cmbBranch" class="form-select-sm">
+                            <option value="-1">-Select-</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Enter Branch Id :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtBranchId" class="form-control-sm text-uppercase" maxlength="9" onkeypress="return validateNumber(event)" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Enter Branch Code :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtBranchCode" class="form-control-sm text-uppercase" maxlength="25" oninput="validateSpecialChars(this)" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Enter Branch Name :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtBranch_name" class="form-control-sm text-uppercase" maxlength="50" oninput="validateSpecialChars(this)" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" class="text-center" style="padding: 20px; background-color: #fdfdfd;">
+                        <button type="button" class="btn btn-sm btn-action me-3" onclick="btnAdd_Click()">Add</button>
+                        <button type="button" class="btn btn-sm btn-action" onclick="window.history.back()">Exit</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const root = '@ViewData["root"]';
+        const firm_id = '@ViewData["FirmID"]';
+
+        $(document).ready(function () {
+            $('#cmbBranch').select2();
+            FillBranchMap();
+        });
+
+        function postApiUrl() {
+            return window.location.hostname === "localhost"
+                ? "/Others/postAPIData"
+                : "/" + root + "/Others/postAPIData".replace(/\/+/g, "/");
+        }
+
+        // ==========================================
+        // Data Loading
+        // ==========================================
+
+        function FillBranchMap() {
+            var reqData = "MAP_BRANCH_GET_MAP_LIST^" + firm_id + "^1";
+            $.ajax({
+                type: "POST",
+                url: postApiUrl(),
+                data: { datas: reqData },
+                success: function (res) {
+                    var data = typeof res === "string" ? JSON.parse(res) : res;
+                    var $cmb = $('#cmbBranch');
+                    $cmb.empty().append('<option value="-1">-Select-</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function (row) {
+                            var val = row.BRANCH_ID || row.branch_id;
+                            var text = row.BRANCH_NAME || row.branch_name;
+                            
+                            // Safe concatenation to avoid Razor string template conflicts
+                            var optionHtml = '<option value="' + val + '">' + text + '</option>';
+                            $cmb.append(optionHtml);
+                        });
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // Client-Side Validations
+        // ==========================================
+
+        function validateNumber(e) {
+            // Allows only numbers and hyphens (matches C# logic: keys 0-9 and '-')
+            var charCode = (e.which) ? e.which : e.keyCode;
+            if (charCode === 8 || charCode === 45 || (charCode >= 48 && charCode <= 57)) {
+                return true;
+            }
+            e.preventDefault();
+            return false;
+        }
+
+        function validateSpecialChars(input) {
+            // Escaped the @@ symbol for ASP.NET Core Razor Pages
+            var regex = /[~`!@@#$%^&*()\-=|\\{}':;.,<>\/?]/g;
+            
+            if (regex.test(input.value)) {
+                Swal.fire("Warning", "Special characters are not allowed !!!", "warning");
+                input.value = input.value.replace(regex, '');
+            }
+            // Ensure uppercase
+            input.value = input.value.toUpperCase();
+        }
+
+        // ==========================================
+        // Save Logic (Sequential Checks)
+        // ==========================================
+
+        async function btnAdd_Click() {
+            var cmbBranch = $('#cmbBranch').val();
+            var txtBranchId = $('#txtBranchId').val().trim();
+            var txtBranchCode = $('#txtBranchCode').val().trim();
+            var txtBranchName = $('#txtBranch_name').val().trim();
+
+            // 1. Validate Form Fields
+            if (!cmbBranch || cmbBranch == "-1" || cmbBranch == "-Select-") {
+                Swal.fire("Map Branch", "Select Branch to Map", "info");
+                return;
+            }
+            if (txtBranchId === "") {
+                Swal.fire("Map Branch", "Enter BranchId", "info");
+                return;
+            }
+            if (txtBranchCode === "") {
+                Swal.fire("Map Branch", "Enter Branch Code", "info");
+                return;
+            }
+            if (txtBranchName === "") {
+                Swal.fire("Map Branch", "Enter Branch name", "info");
+                return;
+            }
+
+            Swal.fire({ title: "Checking Details...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
+            try {
+                // 2. Check if Branch ID Exists
+                var resId = await $.ajax({ type: "POST", url: postApiUrl(), data: { datas: "MAP_BRANCH_CHECK_ID^" + txtBranchId + "^1" }});
+                if (getExtractedCount(resId) > 0) {
+                    resetAndAlert("BRANCHID Already Exists ");
+                    return;
+                }
+
+                // 3. Check if Branch Name Exists
+                var resName = await $.ajax({ type: "POST", url: postApiUrl(), data: { datas: "MAP_BRANCH_CHECK_NAME^" + txtBranchName + "^1" }});
+                if (getExtractedCount(resName) > 0) {
+                    resetAndAlert("BRANCHNAME Already Exists ");
+                    return;
+                }
+
+                // 4. Check if Branch Code Exists
+                var resCode = await $.ajax({ type: "POST", url: postApiUrl(), data: { datas: "MAP_BRANCH_CHECK_CODE^" + txtBranchCode + "^1" }});
+                if (getExtractedCount(resCode) > 0) {
+                    resetAndAlert("BRANCHCODE Already Exists ");
+                    return;
+                }
+
+                // 5. All checks passed -> Save Map
+                // Expected format: BRANCHID ~ BRANCHCODE ~ BRANCHNAME ~ BRANCH_ID ~ branch_id_status(0)
+                var reqData = "MAP_BRANCH_SAVE_MAP^" + txtBranchId + "~" + txtBranchCode + "~" + txtBranchName + "~" + cmbBranch + "~0^1";
+                var resSave = await $.ajax({ type: "POST", url: postApiUrl(), data: { datas: reqData }});
+                
+                var saveData = typeof resSave === "string" ? JSON.parse(resSave) : resSave;
+                if (saveData && saveData.length > 0) {
+                    var status = saveData[0].STATUS || saveData[0].status;
+                    if (status == 1 || status == "1") {
+                        Swal.fire("Map Branch", "Added Successfully", "success").then(() => {
+                            ClearForm();
+                            FillBranchMap();
+                        });
+                    } else {
+                        Swal.fire("Error", "Failed to save mapping.", "error");
+                    }
+                }
+            } 
+            catch (error) {
+                console.error("AJAX Error:", error);
+                Swal.fire("Error", "Server connection failed.", "error");
+            }
+        }
+
+        // Helper to safely parse count from API response
+        function getExtractedCount(res) {
+            var data = typeof res === "string" ? JSON.parse(res) : res;
+            if (data && data.length > 0) {
+                return data[0].CNT || data[0].cnt || 0;
+            }
+            return 0;
+        }
+
+        // Replicates legacy behavior of clearing the form and showing message
+        function resetAndAlert(message) {
+            Swal.fire("Map Branch", message, "info").then(() => {
+                ClearForm();
+                FillBranchMap();
+            });
+        }
+
+        function ClearForm() {
+            $('#cmbBranch').val('-1').trigger('change');
+            $('#txtBranchId').val('');
+            $('#txtBranchCode').val('');
+            $('#txtBranch_name').val('');
+        }
+    </script>
+</body>
+</html>
+
