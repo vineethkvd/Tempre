@@ -1,1 +1,74 @@
+UAT Environment
 
+
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning"
+        }
+    },
+    "Jwt": {
+        "Key": "M18906RajeevKMAFILEmployeeM60981",
+        "Issuer": "manappuram"
+    },
+    "Encryption": {
+        "Key": "80808080808080808080808080808080",
+        "IV": "808080808080"
+    },
+    "ConnectionStrings": {
+        "OracleConnection": "persist security info=false;Connection Timeout=150;Max Pool Size=150;Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=exanode-x8m-ijztf-scan.allexadbclients.macomspokevcn.oraclevcn.com)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=MCPDB.allexadbclients.macomspokevcn.oraclevcn.com)(FAILOVER_MODE=(TYPE=select)(METHOD=basic))));User Id=mana0809;password=mana0809;",
+        "Password": "mana0809;",
+        "Key": "raju"
+    },
+    "IciciPayment": {
+        "token": {
+            "ICICI_API_Key": "1pVyu3jju9Gd3eV5P03ySjt5fAMkAGlv",
+            "ICICI_API_Secret": "PLACE_YOUR_UAT_SECRET_KEY_HERE",
+            "ICICI_GenerateToken_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/clientcredentialsv2/GenerateAccessToken",
+            "ICICI_Payment_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/v1/composite-payment",
+            "ICICI_Status_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/v1/composite-status",
+            "ICICI_CIB_Registration_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/Corporate/CIB/v1/Registration",
+            "ACTION_INTERVELL": "3"
+        }
+    },
+    "AllowedHosts": "*",
+    "LogFlag": "1"
+}
+
+Production Environment
+
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Warning",
+            "Microsoft.AspNetCore": "Error"
+        }
+    },
+    "Jwt": {
+        "Key": "M18906RajeevKMAFILEmployeeM60981",
+        "Issuer": "manappuram"
+    },
+    "Encryption": {
+        "Key": "80808080808080808080808080808080",
+        "IV": "808080808080"
+    },
+    "ConnectionStrings": {
+        "OracleConnection": "persist security info=false;Connection Timeout=150;Max Pool Size=150;Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=exanode-x8m-ijztf-scan.allexadbclients.macomspokevcn.oraclevcn.com)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=MCPDB.allexadbclients.macomspokevcn.oraclevcn.com)(FAILOVER_MODE=(TYPE=select)(METHOD=basic))));User Id=mana0809;password=mana0809;",
+        "Password": "mana0809;",
+        "Key": "raju"
+    },
+    "IciciPayment": {
+        "token": {
+            "ICICI_API_Key": "PLACE_YOUR_PRODUCTION_API_KEY_HERE",
+            "ICICI_API_Secret": "PLACE_YOUR_PRODUCTION_SECRET_KEY_HERE",
+            "ICICI_GenerateToken_URL": "https://igateway.icici.bank.in/clientcredentialsv2/GenerateAccessToken",
+            "ICICI_Payment_URL": "https://igateway.icici.bank.in/api/v1/composite-payment",
+            "ICICI_Status_URL": "https://igateway.icici.bank.in/api/v1/composite-status",
+            "ICICI_CIB_Registration_URL": "https://igateway.icici.bank.in/api/Corporate/CIB/v1/Registration",
+            "ACTION_INTERVELL": "3"
+        }
+    },
+    "AllowedHosts": "*",
+    "LogFlag": "1"
+}
