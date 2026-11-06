@@ -1,2 +1,155 @@
 
 
+Based on the ICICI Composite API documentation, the IMPS status check process uses the same Debit Status Check API endpoint as NEFT and RTGS. Because of this, the payload structure and headers used for IMPS status checks are identical to those used for NEFT/RTGS debit status checks, with one critical difference: the x-priority header must be set to 0100.
+Here is the corrected IMPS_STATUS_CHECK block using the exact string concatenation approach for the inner JSON payload.
+else if (requestDto.p_flag == "IMPS_STATUS_CHECK")
+{
+    string decData = "";
+    string SesionKey = "sXBkN6xUgHZfMLOs";
+    string service = "PaymentApi";
+
+    // Expected v_spliter_a format: UNIQUEID(0)~CORPID(1)~USERID(2)~AGGRID(3)~URN(4)
+    string[] v_spliter_a = requestDto.p_pagevalue.Split('~');
+
+    try
+    {
+        WriteToFile("<IMPS Status INQ Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+        // Generate OAuth Token (Mandatory)
+        string authToken = GenerateOAuthToken();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            WriteToFile("OAuth Token Generation Failed");
+            return "9~OAuth Token Generation Failed";
+        }
+
+        // 1. Extract the 5 required fields dynamically from the splitter array[span_5](start_span)[span_5](end_span)[span_6](start_span)[span_6](end_span)
+        string uniqueId = v_spliter_a.Length > 0 ? v_spliter_a[0] : "";
+        string corpId = v_spliter_a.Length > 1 ? v_spliter_a[1] : "";
+        string userId = v_spliter_a.Length > 2 ? v_spliter_a[2] : "";
+        string aggrId = v_spliter_a.Length > 3 ? v_spliter_a[3] : "";
+        string urn = v_spliter_a.Length > 4 ? v_spliter_a[4] : "";
+
+        string ImpsResponse, ActCode, Response, TranRefNo, BankRRN, PaymentRef, TranDateTime, Amount, BeneMMID, RemMobile, BeneAccNo, BeneIFSC, RemName, BeneMobile, RetailerCode, BeneName;
+
+        // 2. Build the INNER request payload using the string concatenation approach[span_7](start_span)[span_7](end_span)[span_8](start_span)[span_8](end_span)
+        string request = "{\"AGGRID\":\"" + aggrId + "\",\"CORPID\":\"" + corpId + "\",\"USERID\":\"" + userId + "\",\"URN\":\"" + urn + "\",\"UNIQUEID\":\"" + uniqueId + "\"}";
+
+        WriteToFile("IMPS Status Plain Request: " + request);
+        
+        string randomkey = Encrypt(SesionKey);
+        string data = Encryptkey(request);
+
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+        HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(ICICI_Status_URL);
+
+        // Required Headers[span_9](start_span)[span_9](end_span)
+        webRequest.Headers["apikey"] = ICICI_API_Key;
+        webRequest.Headers["Authorization"] = "Bearer " + authToken; 
+        webRequest.Headers["x-priority"] = "0100"; // 0100 is required for IMPS Status Check[span_10](start_span)[span_10](end_span)
+        webRequest.ContentType = "application/json";
+        webRequest.Accept = "application/json";
+        webRequest.Method = "POST";
+
+        // 3. Build the OUTER JSON payload using string concatenation[span_11](start_span)[span_11](end_span)
+        string json = "{\"requestId\":\"" + uniqueId + "\",\"service\":\"" + service + "\",\"encryptedKey\":\"" + randomkey + "\",\"oaepHashingAlgorithm\":\"NONE\",\"iv\":\"\",\"encryptedData\":\"" + data + "\",\"clientInfo\":\"\",\"optionalParam\":\"\"}";
+
+        WriteToFile("IMPS Status URL: " + ICICI_Status_URL);
+        WriteToFile("IMPS Status API Key: " + ICICI_API_Key);
+        WriteToFile("IMPS Status Encrypted Request JSON: " + json);
+
+        using (Stream outputstream = webRequest.GetRequestStream())
+        {
+            byte[] postBytes = Encoding.UTF8.GetBytes(json);
+            outputstream.Write(postBytes, 0, postBytes.Length);
+        }
+
+        using (WebResponse myWebResponse = webRequest.GetResponse())
+        using (Stream ReceiveStream = myWebResponse.GetResponseStream())
+        using (StreamReader readStream = new StreamReader(ReceiveStream, Encoding.UTF8))
+        {
+            string response = readStream.ReadToEnd();
+            WriteToFile("IMPS Status Raw Response JSON: " + response);
+
+            JObject joResponse = JObject.Parse(response);
+            string resData = joResponse.SelectToken("encryptedData")?.ToString() ?? "error";
+            string resKey = joResponse.SelectToken("encryptedKey")?.ToString();
+
+            WriteToFile("IMPS Status Encrypted Response Data (resData): " + resData);
+
+            if (resData != "error")
+            {
+                byte[] resEncrydata = Convert.FromBase64String(resData);
+                byte[] resIv = new byte[16];
+                byte[] encryData = new byte[resEncrydata.Length - 16];
+                Buffer.BlockCopy(resEncrydata, 0, resIv, 0, 16);
+                Buffer.BlockCopy(resEncrydata, 16, encryData, 0, resEncrydata.Length - 16);
+
+                string decReskey = Decrypt(resKey);
+                byte[] decKey = Encoding.ASCII.GetBytes(decReskey);
+                decData = DecryptText(encryData, decKey, resIv);
+
+                WriteToFile("IMPS Status Final Decrypted Result: " + decData);
+
+                JObject jodecResponse = JObject.Parse(decData);
+
+                // Check if the response follows the IMPS 360 format or the standard Debit Status format[span_12](start_span)[span_12](end_span)
+                if (jodecResponse.SelectToken("ImpsResponse") != null)
+                {
+                    // This block handles the legacy IMPS Recon 360 response structure if returned by the bank[span_13](start_span)[span_13](end_span)
+                    ImpsResponse = jodecResponse.SelectToken("ImpsResponse").ToString();
+                    JObject joImpsResponse = JObject.Parse(ImpsResponse);
+
+                    ActCode = joImpsResponse.SelectToken("ActCode")?.ToString() ?? "0";
+                    BeneName = joImpsResponse.SelectToken("BeneName")?.ToString() ?? "0";
+                    Response = joImpsResponse.SelectToken("Response")?.ToString() ?? "0";
+                    TranRefNo = joImpsResponse.SelectToken("TranRefNo")?.ToString() ?? "0";
+                    BankRRN = joImpsResponse.SelectToken("BankRRN")?.ToString() ?? "0";
+                    PaymentRef = joImpsResponse.SelectToken("PaymentRef")?.ToString() ?? "0";
+                    TranDateTime = joImpsResponse.SelectToken("TranDateTime")?.ToString() ?? "0";
+                    Amount = joImpsResponse.SelectToken("Amount")?.ToString() ?? "0";
+                    BeneMMID = joImpsResponse.SelectToken("BeneMMID")?.ToString() ?? "0";
+                    BeneMobile = joImpsResponse.SelectToken("BeneMobile")?.ToString() ?? "0";
+                    BeneAccNo = joImpsResponse.SelectToken("BeneAccNo")?.ToString() ?? "0";
+                    BeneIFSC = joImpsResponse.SelectToken("BeneIFSC")?.ToString() ?? "0";
+                    RemName = joImpsResponse.SelectToken("RemName")?.ToString() ?? "0";
+                    RemMobile = joImpsResponse.SelectToken("RemMobile")?.ToString() ?? "0";
+                    RetailerCode = joImpsResponse.SelectToken("RetailerCode")?.ToString() ?? "0";
+
+                    decData = "1~" + TranRefNo + "~" + ActCode + "~" + Response + "~" + BankRRN + "~" + PaymentRef + "~" + TranDateTime + "~" + Amount + "~" + BeneMMID + "~" + BeneMobile + "~" + BeneAccNo + "~" + BeneName + "~" + BeneIFSC + "~" + RemName + "~" + RemMobile + "~" + RetailerCode;
+                }
+                else
+                {
+                    // This block handles the standard Composite Status API format[span_14](start_span)[span_14](end_span)
+                    string status = jodecResponse.SelectToken("STATUS")?.ToString() ?? "";
+                    bool stat = false;
+                    if (status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        stat = true;
+                    }
+
+                    // Map output parameters matching the documentation[span_15](start_span)[span_15](end_span)
+                    ActCode = status != "" ? status : "UNKNOWN";
+                    Response = jodecResponse.SelectToken("MESSAGE")?.ToString() ?? (jodecResponse.SelectToken("RESPONSE")?.ToString() ?? "");
+                    TranRefNo = jodecResponse.SelectToken("UNIQUEID")?.ToString() ?? uniqueId;
+                    BankRRN = jodecResponse.SelectToken("UTRNUMBER")?.ToString() ?? "0";
+
+                    // Return format: StatusFlag~TransRefNo~BankRRN~ActCode~ResponseMsg
+                    decData = (stat ? "1~" : "9~") + TranRefNo + "~" + BankRRN + "~" + ActCode + "~" + Response;
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        decData = "iciciimpsstatus Error: " + (v_spliter_a.Length > 0 ? v_spliter_a[0] : "UNKNOWN") + " - " + ex.Message;
+        WriteToFile(decData);
+    }
+    WriteToFile("<IMPS Status INQ End> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+    return decData;
+}
+
+Exact pagevalue Sample to Test IMPS Status Check:
+Pass the original UNIQUEID along with your fixed corporate details, exactly as you would for NEFT/RTGS status checks.
+20261106145500~SESPRODUCT~TECH1~TXBCOMP0260~574763144
+
