@@ -1,1 +1,122 @@
 
+else if (requestDto.p_flag == "NEFT_PAYMENT")
+{
+    string rvalue = "";
+    string SesionKey = "sXBkN6xUgHZfMLOs";
+    string service = "PaymentApi";
+    string WORKFLOW_REQD = "N";
+
+    // Expected format: tranRefNo(0)~amount(1)~senderAcctNo(2)~beneAccNo(3)~beneName(4)~beneIFSC(5)~narration1(6)~narration2(7)~crpId(8)~crpUsr(9)~aggrId(10)~aggrName(11)~urn(12)~txnType(13)
+    string[] v_spliter_a = requestDto.p_pagevalue.Split('~');
+
+    try
+    {
+        WriteToFile("<NEFT Payment Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+        // Generate OAuth Token (Mandatory)
+        string authToken = GenerateOAuthToken();
+        if (string.IsNullOrEmpty(authToken))
+        {
+            WriteToFile("OAuth Token Generation Failed");
+            return "9~OAuth Token Generation Failed";
+        }
+
+        // 1. Extract all fields dynamically from the splitter array
+        string tranRefNo = v_spliter_a.Length > 0 ? v_spliter_a[0] : "";
+        string amount = v_spliter_a.Length > 1 ? v_spliter_a[1] : "";
+        string senderAcctNo = v_spliter_a.Length > 2 ? v_spliter_a[2] : "";
+        string beneAccNo = v_spliter_a.Length > 3 ? v_spliter_a[3] : "";
+        string beneName = v_spliter_a.Length > 4 ? v_spliter_a[4] : "";
+        string beneIFSC = v_spliter_a.Length > 5 ? v_spliter_a[5] : "";
+        string narration1 = v_spliter_a.Length > 6 ? v_spliter_a[6] : "";
+        string narration2 = v_spliter_a.Length > 7 ? v_spliter_a[7] : "";
+        string crpId = v_spliter_a.Length > 8 ? v_spliter_a[8] : "";
+        string crpUsr = v_spliter_a.Length > 9 ? v_spliter_a[9] : "";
+        string aggrId = v_spliter_a.Length > 10 ? v_spliter_a[10] : "";
+        string aggrName = v_spliter_a.Length > 11 ? v_spliter_a[11] : "";
+        string urn = v_spliter_a.Length > 12 ? v_spliter_a[12] : "";
+        string txnType = v_spliter_a.Length > 13 ? v_spliter_a[13] : "RGS";
+
+        // 2. Build the INNER request payload using the old string concatenation approach
+        string request = "{\"tranRefNo\":\"" + tranRefNo + "\",\"amount\":\"" + amount + "\",\"senderAcctNo\":\"" + senderAcctNo + "\",\"beneAccNo\":\"" + beneAccNo + "\",\"beneName\":\"" + beneName + "\",\"beneIFSC\":\"" + beneIFSC + "\",\"narration1\":\"" + narration1 + "\",\"narration2\":\"" + narration2 + "\",\"crpId\":\"" + crpId + "\",\"crpUsr\":\"" + crpUsr + "\",\"aggrId\":\"" + aggrId + "\",\"aggrName\":\"" + aggrName + "\",\"urn\":\"" + urn + "\",\"txnType\":\"" + txnType + "\",\"WORKFLOW_REQD\":\"" + WORKFLOW_REQD + "\"}";
+
+        WriteToFile("NEFT Plain Request: " + request);
+
+        string randomkey = Encrypt(SesionKey);
+        string data = Encryptkey(request);
+
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+        HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(ICICI_Payment_URL);
+
+        webRequest.Headers["apikey"] = ICICI_API_Key;
+        webRequest.Headers["Authorization"] = "Bearer " + authToken; 
+        webRequest.Headers["x-priority"] = "0010"; // NEFT Priority Code
+        webRequest.ContentType = "application/json";
+        webRequest.Accept = "application/json";
+        webRequest.Method = "POST";
+
+        // 3. Build the OUTER JSON payload using string concatenation. 
+        // IMPORTANT FIX: Populating 'requestId' with tranRefNo instead of leaving it blank.
+        string json = "{\"requestId\":\"" + tranRefNo + "\",\"service\":\"" + service + "\",\"encryptedKey\":\"" + randomkey + "\",\"oaepHashingAlgorithm\":\"NONE\",\"iv\":\"\",\"encryptedData\":\"" + data + "\",\"clientInfo\":\"\",\"optionalParam\":\"\"}";
+
+        WriteToFile("NEFT URL: " + ICICI_Payment_URL);
+        WriteToFile("NEFT Encrypted Request JSON: " + json);
+
+        using (Stream outputstream = webRequest.GetRequestStream())
+        {
+            byte[] postBytes = Encoding.UTF8.GetBytes(json);
+            outputstream.Write(postBytes, 0, postBytes.Length);
+        }
+
+        using (WebResponse myWebResponse = webRequest.GetResponse())
+        using (Stream ReceiveStream = myWebResponse.GetResponseStream())
+        using (StreamReader readStream = new StreamReader(ReceiveStream, Encoding.UTF8))
+        {
+            string response = readStream.ReadToEnd();
+            WriteToFile("NEFT Raw Response JSON: " + response);
+
+            JObject joResponse = JObject.Parse(response);
+            string resData = joResponse.SelectToken("encryptedData")?.ToString() ?? "Error";
+            string resKey = joResponse.SelectToken("encryptedKey")?.ToString();
+
+            WriteToFile("NEFT Encrypted Response Data (resData): " + resData);
+
+            if (resData != "Error")
+            {
+                byte[] resEncrydata = Convert.FromBase64String(resData);
+                byte[] resIv = new byte[16];
+                byte[] encryData = new byte[resEncrydata.Length - 16];
+                Buffer.BlockCopy(resEncrydata, 0, resIv, 0, 16);
+                Buffer.BlockCopy(resEncrydata, 16, encryData, 0, resEncrydata.Length - 16);
+
+                string decReskey = Decrypt(resKey);
+                byte[] decKey = Encoding.ASCII.GetBytes(decReskey);
+                rvalue = DecryptText(encryData, decKey, resIv);
+
+                WriteToFile("NEFT Final Decrypted Result: " + rvalue);
+            }
+        }
+    }
+    catch (WebException ex) // ADDED: WebException block specifically to catch and read the 400 Bad Request API Gateway body
+    {
+        string errorDetail = ex.Message;
+        if (ex.Response != null)
+        {
+            using (Stream errorStream = ex.Response.GetResponseStream())
+            using (StreamReader reader = new StreamReader(errorStream))
+            {
+                errorDetail = reader.ReadToEnd();
+            }
+        }
+        rvalue = "9~" + (v_spliter_a.Length > 0 ? v_spliter_a[0] : "UNKNOWN") + "~" + errorDetail;
+        WriteToFile("NEFT WebException (400) Error Details: " + errorDetail);
+    }
+    catch (Exception ex)
+    {
+        rvalue = "9~" + (v_spliter_a.Length > 0 ? v_spliter_a[0] : "UNKNOWN") + "~" + ex.Message;
+        WriteToFile("NEFT Error: " + rvalue);
+    }
+
+    WriteToFile("<NEFT Payment End> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+    return rvalue;
+}
