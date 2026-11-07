@@ -1,26 +1,16 @@
-
-private X509Certificate2 GetPrivateCertificate()
+private X509Certificate2 GetCertificate()
 {
-    string path = Path.Combine(_certRootPath, "Certificates", "Private_cer", "manappuram.net_2026.pfx");
+    string path = Path.Combine(_certRootPath, "Certificates", "Public_cer", "Composite-UAT.cer");
 
     if (!File.Exists(path))
     {
-        throw new FileNotFoundException($"Private PFX certificate not found at: {path}");
+        throw new FileNotFoundException($"Public certificate not found at specified path: {path}");
     }
 
-    X509Certificate2 certificate = new X509Certificate2(
-        path,
-        "mana@123",
-        X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
-
-    if (certificate.HasPrivateKey)
-    {
-        // Log confirmation that the private key was successfully extracted
-        WriteToFile("<PRIVATE KEY EXTRACTED SUCCESSFULLY> Path: " + path + " | Thumbprint: " + certificate.Thumbprint + " | Subject: " + certificate.Subject);
-        
-        return certificate;
-    }
-
-    WriteToFile("<KEY IS Null>manappuram.net_2026.pfx - The certificate was found but does not contain a private key.");
-    return null;
+    X509Certificate2 certificate = new X509Certificate2(path, (string)null, X509KeyStorageFlags.EphemeralKeySet);
+    
+    // Log confirmation that the public key was successfully loaded
+    WriteToFile("<PUBLIC KEY LOADED SUCCESSFULLY> Path: " + path + " | Thumbprint: " + certificate.Thumbprint + " | Subject: " + certificate.Subject);
+    
+    return certificate;
 }
