@@ -1,16 +1,1 @@
-private X509Certificate2 GetCertificate()
-{
-    string path = Path.Combine(_certRootPath, "Certificates", "Public_cer", "Composite-UAT.cer");
 
-    if (!File.Exists(path))
-    {
-        throw new FileNotFoundException($"Public certificate not found at specified path: {path}");
-    }
-
-    X509Certificate2 certificate = new X509Certificate2(path, (string)null, X509KeyStorageFlags.EphemeralKeySet);
-    
-    // Log confirmation that the public key was successfully loaded
-    WriteToFile("<PUBLIC KEY LOADED SUCCESSFULLY> Path: " + path + " | Thumbprint: " + certificate.Thumbprint + " | Subject: " + certificate.Subject);
-    
-    return certificate;
-}
