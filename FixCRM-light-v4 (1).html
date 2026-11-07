@@ -1,14 +1,1 @@
 
-    -- ---------------------- ACTIVE BRANCHES DROPDOWN ---------------------- 
-
-    ELSIF p_flag = 'GET_ACTIVE_BRANCHES' THEN
-        -- Expected parameters:
-        -- v_spliter_a(1) = FIRM_ID
-        
-        OPEN p_as_outresult FOR
-            SELECT a.BRANCH_ID, b.BRANCH_NAME
-            FROM active_firms a 
-            INNER JOIN branch_master b ON a.BRANCH_ID = b.BRANCH_ID  
-            WHERE a.FIRM_ID = TO_NUMBER(v_spliter_a(1)) 
-            AND b.STATUS_ID = 1 
-            ORDER BY b.BRANCH_NAME;
