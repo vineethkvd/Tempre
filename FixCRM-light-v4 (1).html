@@ -1,1 +1,479 @@
 
+﻿@{
+ViewData["Title"] = "AddNewAccounts";
+Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADD NEW ACCOUNTS</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/index.css" />
+    <script src="~/js/site.js"></script>
+
+    <style>
+            body {
+                background-color: #e9ecef;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+            }
+
+            .main-container-css {
+                width: 900px;
+                max-width: 900px;
+                margin: 0 auto;
+                background-color: #f4f6f9;
+                padding: 20px;
+                border: 1px solid #ccc;
+                box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            }
+
+            .table-custom {
+                width: 100%;
+                border-collapse: collapse;
+                background-color: #ffffff;
+                border: 1px solid #b0bec5;
+            }
+
+                .table-custom th {
+                    background-color: #85c1e9 !important;
+                    color: #000000;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                    padding: 10px;
+                    border: 1px solid #b0bec5;
+                    text-decoration: underline;
+                    text-transform: uppercase;
+                }
+
+                .table-custom td {
+                    border: 1px solid #b0bec5;
+                    padding: 12px 15px;
+                    vertical-align: middle;
+                    font-size: 14px;
+                }
+
+            .label-cell {
+                text-align: right;
+                font-weight: bold;
+                width: 35%;
+                background-color: #fdfdfd;
+            }
+
+            .input-cell {
+                width: 65%;
+            }
+
+            .form-control-sm, .form-select-sm {
+                border: 1px solid #999;
+                border-radius: 4px;
+                padding: 6px 8px;
+                font-size: 13px;
+                width: 80%;
+                background-color: #ffffff;
+            }
+
+                .form-control-sm:focus, .form-select-sm:focus {
+                    background-color: #f1f8ff;
+                    border-color: #0066cc;
+                    outline: none;
+                }
+
+            .btn-action {
+                background-color: #2c3e50;
+                color: white;
+                border: none;
+                font-weight: bold;
+                padding: 6px 20px;
+                min-width: 100px;
+            }
+
+                .btn-action:hover {
+                    background-color: #1a252f;
+                    color: white;
+                }
+    </style>
+</head>
+<body>
+    <div class="main-container-css">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th colspan="2">ADD NEW ACCOUNTS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Account Nature :</td>
+                    <td class="input-cell">
+                        <select id="cmbAccNature" class="form-select-sm" onchange="cmbAccNature_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Account Schedule :</td>
+                    <td class="input-cell">
+                        <select id="cmbAccShedule" class="form-select-sm" onchange="cmbAccShedule_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Sub Schedule :</td>
+                    <td class="input-cell">
+                        <select id="cmbSubShedule" class="form-select-sm" onchange="cmbSubShedule_SelectedIndexChanged()">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Sub Type :</td>
+                    <td class="input-cell">
+                        <select id="cmbSubType" class="form-select-sm">
+                            <option value="-1">------SELECT------</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">New Account Name :</td>
+                    <td class="input-cell">
+                        <input type="text" id="txtAccName" class="form-control-sm text-uppercase" maxlength="100" onkeypress="return validateAccName(event)" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label-cell">Account No :</td>
+                    <td class="input-cell">
+                        <input type="text" id="valtxtAcountNo" class="form-control-sm" maxlength="5" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" class="text-center" style="padding: 20px; background-color: #fdfdfd;">
+                        <button type="button" class="btn btn-sm btn-action me-3" onclick="btnConfirm_Click()">Confirm</button>
+                        <button type="button" class="btn btn-sm btn-action" onclick="window.history.back()">Exit</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+            const root = '@ViewData["root"]';
+            const usr_id = '@ViewData["EmpCode"]';
+            const firm_id = '@ViewData["FirmID"]';
+            var extractedUsrId = usr_id.split('!')[0];
+
+            $(document).ready(function() {
+                $('#cmbAccNature').select2();
+                $('#cmbAccShedule').select2();
+                $('#cmbSubShedule').select2();
+                $('#cmbSubType').select2();
+
+                FillAccNature();
+            });
+
+      
+          
+            function postApiUrl() {
+
+                if (document.location.hostname === "localhost") {
+                    return "/VEFAcc/postAPIData";
+                }
+
+                return "/" + root + "/VEFAcc/postAPIData";
+            }
+
+
+            function FillAccNature() {
+                var reqData = "ADD_ACC_GET_NATURE^1";
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function(res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        var $cmb = $('#cmbAccNature');
+                        $cmb.empty().append('<option value="-1">------SELECT------</option>');
+                        if (data && data.length > 0) {
+                            data.forEach(function(row) {
+                                var val = row.NATURE_NO || row.nature_no;
+                                var text = row.ACCNATURE_NAME || row.accnature_name;
+                                $cmb.append(`<option value="${val}">${text}</option>`);
+                            });
+                        }
+                    }
+                });
+            }
+
+            function cmbAccNature_SelectedIndexChanged() {
+                var natureNo = $('#cmbAccNature').val();
+                $('#cmbAccShedule').empty().append('<option value="-1">------SELECT------</option>');
+                $('#cmbSubShedule').empty().append('<option value="-1">------SELECT------</option>');
+                $('#cmbSubType').empty().append('<option value="-1">------SELECT------</option>');
+
+                if (natureNo !== "-1" && natureNo !== "") {
+                    var reqData = "ADD_ACC_GET_SCHEDULE^" + natureNo + "^1";
+                    $.ajax({
+                        type: "POST",
+                        url: postApiUrl(),
+                        data: { datas: reqData },
+                        success: function(res) {
+                            var data = typeof res === "string" ? JSON.parse(res) : res;
+                            var $cmb = $('#cmbAccShedule');
+                            if (data && data.length > 0) {
+                                data.forEach(function(row) {
+                                    var val = row.SCHEDULE_NO || row.schedule_no;
+                                    var text = row.SCHEDULE_NAME || row.schedule_name;
+                                    $cmb.append(`<option value="${val}">${text}</option>`);
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+
+            function cmbAccShedule_SelectedIndexChanged() {
+                var scheduleNo = $('#cmbAccShedule').val();
+                $('#cmbSubShedule').empty().append('<option value="-1">------SELECT------</option>');
+                $('#cmbSubType').empty().append('<option value="-1">------SELECT------</option>');
+
+                if (scheduleNo !== "-1" && scheduleNo !== "") {
+                    var reqData = "ADD_ACC_GET_SUBSCHEDULE^" + scheduleNo + "^1";
+                    $.ajax({
+                        type: "POST",
+                        url: postApiUrl(),
+                        data: { datas: reqData },
+                        success: function(res) {
+                            var data = typeof res === "string" ? JSON.parse(res) : res;
+                            var $cmb = $('#cmbSubShedule');
+                            if (data && data.length > 0) {
+                                data.forEach(function(row) {
+                                    var val = row.SUBSCHEDULE_NO || row.subschedule_no;
+                                    var text = row.SUBSCHEDULE_NAME || row.subschedule_name;
+                                    $cmb.append(`<option value="${val}">${text}</option>`);
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+
+            function cmbSubShedule_SelectedIndexChanged() {
+                var subScheduleNo = $('#cmbSubShedule').val();
+                $('#cmbSubType').empty().append('<option value="-1">------SELECT------</option>');
+
+                if (subScheduleNo !== "-1" && subScheduleNo !== "") {
+                    var reqData = "ADD_ACC_GET_SUBTYPE^1";
+                    $.ajax({
+                        type: "POST",
+                        url: postApiUrl(),
+                        data: { datas: reqData },
+                        success: function(res) {
+                            var data = typeof res === "string" ? JSON.parse(res) : res;
+                            var $cmb = $('#cmbSubType');
+                            if (data && data.length > 0) {
+                                data.forEach(function(row) {
+                                    var val = row.STATUS_ID || row.status_id;
+                                    var text = row.SUBTYPE || row.subtype;
+                                    $cmb.append(`<option value="${val}">${text}</option>`);
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+
+            // ==========================================
+            // Client-Side Validations
+            // ==========================================
+
+            function validateAccName(e) {
+                // Replicating C# Regex: /[^a-zA-Z0-9\s/\-&()\b]/
+                // This prevents invalid symbols from being typed.
+                var regex = new RegExp("^[a-zA-Z0-9\\s/\\-&()]+$");
+                var key = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+
+                // Allow backspace/delete
+                if (e.charCode === 0 || e.keyCode === 8 || e.keyCode === 46) return true;
+
+                if (!regex.test(key)) {
+                    e.preventDefault();
+                    Swal.fire("Warning", "Invalid Symbol: " + key, "warning");
+                    return false;
+                }
+                return true;
+            }
+
+            function IsValidAll() {
+                var nature = $('#cmbAccNature').val();
+                var schedule = $('#cmbAccShedule').val();
+                var subSchedule = $('#cmbSubShedule').val();
+                var subType = $('#cmbSubType').val();
+                var accName = $('#txtAccName').val().trim();
+                var accNo = $('#valtxtAcountNo').val().trim();
+
+                if (!nature || nature == "-1") {
+                    Swal.fire("Warning", "Select Account Nature.", "warning");
+                    return false;
+                }
+                if (!schedule || schedule == "-1") {
+                    Swal.fire("Warning", "Select Account Shedule.", "warning");
+                    return false;
+                }
+                if (!subSchedule || subSchedule == "-1") {
+                    Swal.fire("Warning", "Select Account Sub Shedule.", "warning");
+                    return false;
+                }
+                if (!subType || subType == "-1") {
+                    Swal.fire("Warning", "Select Sub Type.", "warning");
+                    return false;
+                }
+                if (accName === "") {
+                    Swal.fire("Warning", "Enter New Account Name.", "warning");
+                    return false;
+                }
+                if (accNo === "") {
+                    Swal.fire("Warning", "Enter Account No.", "warning");
+                    return false;
+                }
+                if (accNo.length !== 5) {
+                    Swal.fire("Warning", "Enter 5 digit Account No.", "warning");
+                    return false;
+                }
+
+                // Validation Rule: First digit of Account Nature MUST match First digit of Account No.
+                var natureFirstChar = nature.toString().substring(0, 1);
+                var accNoFirstChar = accNo.toString().substring(0, 1);
+                if (natureFirstChar !== accNoFirstChar) {
+                    Swal.fire("Warning", "Account number and Account nature are different.", "warning");
+                    return false;
+                }
+
+                return true;
+            }
+
+            // ==========================================
+            // Server-Side Validations & Saving
+            // ==========================================
+
+            function btnConfirm_Click() {
+                if (!IsValidAll()) return;
+
+                var accName = $('#txtAccName').val().trim().toUpperCase();
+                var accNo = $('#valtxtAcountNo').val().trim();
+
+                Swal.fire({ title: "Checking Details...", text: "Please wait.", allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                // 1. Check if Account Name Exists
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: "ADD_ACC_CHECK_NAME^" + accName + "^1" },
+                    success: function(resName) {
+                        var dataName = typeof resName === "string" ? JSON.parse(resName) : resName;
+                        var nameCnt = dataName[0].CNT || dataName[0].cnt || 0;
+
+                        if (nameCnt > 0) {
+                            Swal.fire("Warning", "Account Name already exist.", "warning");
+                            $('#txtAccName').val('');
+                            return;
+                        }
+
+                        // 2. Check if Account No Exists
+                        $.ajax({
+                            type: "POST",
+                            url: postApiUrl(),
+                            data: { datas: "ADD_ACC_CHECK_ACCNO^" + accNo + "^1" },
+                            success: function(resNo) {
+                                var dataNo = typeof resNo === "string" ? JSON.parse(resNo) : resNo;
+                                var noCnt = dataNo[0].CNT || dataNo[0].cnt || 0;
+
+                                if (noCnt > 0) {
+                                    Swal.fire("Warning", "Account Number already exist.", "warning");
+                                    $('#valtxtAcountNo').val('');
+                                    return;
+                                }
+
+                                // 3. Optional: Check Account Profile existence based on C# logic
+                                var nature = $('#cmbAccNature').val();
+                                var schedule = $('#cmbAccShedule').val();
+                                var subSchedule = $('#cmbSubShedule').val();
+                                var subType = $('#cmbSubType').val();
+
+                                $.ajax({
+                                    type: "POST",
+                                    url: postApiUrl(),
+                                    data: { datas: "ADD_ACC_CHECK_PROFILE^" + nature + "~" + schedule + "~" + subSchedule + "^1" },
+                                    success: function(resProf) {
+                                        // Proceeds to insert even if profile logic counts > 0 (following legacy C# behavior which returns true regardless)
+                                        executeInsert(accNo, accName, subSchedule, schedule, nature, firm_id, subType, extractedUsrId);
+                                    },
+                                    error: function() {
+                                        Swal.fire("Error", "Validation failed on server.", "error");
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            function executeInsert(accNo, accName, subSchedule, schedule, nature, firmId, subType, userId) {
+                // Expected parameter format: ACCOUNTNO ~ ACCOUNTNAME ~ SUB_SHEDULE_NO ~ SHEDULE_NO ~ NATURE_NO ~ FIRM_ID ~ HOSTATUS(SubType) ~ USERID
+                var reqData = "ADD_ACC_INSERT_NEW^" + accNo + "~" + accName + "~" + subSchedule + "~" + schedule + "~" + nature + "~" + firmId + "~" + subType + "~" + userId + "^1";
+
+                $.ajax({
+                    type: "POST",
+                    url: postApiUrl(),
+                    data: { datas: reqData },
+                    success: function(res) {
+                        var data = typeof res === "string" ? JSON.parse(res) : res;
+                        if (data && data.length > 0) {
+                            var status = data[0].STATUS || data[0].status;
+
+                            if (status == 1 || status == "1") {
+                                Swal.fire("New Accounts", "Saved Successfully.", "success").then(() => {
+                                    ClearAllControls();
+                                });
+                            } else {
+                                Swal.fire("New Accounts", "Failed. Please Try Again Later", "warning");
+                            }
+                        } else {
+                            Swal.fire("Error", "Unexpected error occurred while performing this operation!", "error");
+                        }
+                    },
+                    error: function() {
+                        Swal.fire("Error", "Server connection failed.", "error");
+                    }
+                });
+            }
+
+            function ClearAllControls() {
+                $('#cmbAccNature').val('-1').trigger('change');
+                $('#cmbAccShedule').empty().append('<option value="-1">------SELECT------</option>');
+                $('#cmbSubShedule').empty().append('<option value="-1">------SELECT------</option>');
+                $('#cmbSubType').empty().append('<option value="-1">------SELECT------</option>');
+
+                $('#txtAccName').val('');
+                $('#valtxtAcountNo').val('');
+            }
+    </script>
+</body>
+</html>
