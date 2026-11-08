@@ -1,1 +1,164 @@
 
+NEFT Payment Test Data for Your CIB Credentials
+
+Based on your CIB registration payload:
+
+```json
+{"CORPID":"TXBCORP1","AGGRID":"TXBCOMP0533","AGGRNAME":"MANAPPURAMFIN","USERID":"USER1","URN":"MANAPPURAMGL","ALIASID":""}
+```
+
+Here is the matching test data for every operation, formatted exactly as your code's value.Split('~') expects.
+
+---
+
+🧪 Test Data Sets
+
+1️⃣ CIB Registration
+
+Format: CORPID~USERID~AGGRNAME~AGGRID~URN~ALIASID
+
+```
+TXBCORP1~USER1~MANAPPURAMFIN~TXBCOMP0533~MANAPPURAMGL~
+```
+
+✅ This is exactly what you already ran successfully.
+
+---
+
+2️⃣ NEFT Payment (to non-ICICI bank – RGS / interbank)
+
+Format: tranRefNo~amount~senderAcctNo~beneAccNo~beneName~beneIFSC~narration1~narration2~crpId~crpUsr~aggrId~aggrName~urn~txnType
+
+```
+20261108103000~1.00~000405002777~0004510002776~TestUser~DLXB0000092~NEFT transaction~Test~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~RGS
+```
+
+Field Value Notes
+tranRefNo 20261108103000 14-digit unique; must be unique per request
+amount 1.00 Min ₹1 for UAT
+senderAcctNo 000405002777 Your debit account (provided in UAT)
+beneAccNo 0004510002776 Test beneficiary account
+beneName TestUser 
+beneIFSC DLXB0000092 Non-ICICI (Dhanlaxmi Bank) → RGS type
+narration1 NEFT transaction 
+narration2 Test 
+crpId TXBCORP1 ✅ matches your CIB
+crpUsr USER1 ✅ matches your CIB
+aggrId TXBCOMP0533 ✅ matches your CIB
+aggrName MANAPPURAMFIN ✅ matches your CIB
+urn MANAPPURAMGL ✅ matches your CIB
+txnType RGS RGS = interbank NEFT
+
+---
+
+3️⃣ NEFT Payment (to ICICI bank – TPA, intra-bank)
+
+Format: same as above
+
+```
+20261108103100~1.00~000405002777~000405002776~PratikMundhe~ICIC0000011~NEFT transaction~Test~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~TPA
+```
+
+✅ Use ICIC0000011 (mandatory ICICI IFSC) and TPA for intra-bank payments. Doc (Page 18 & 14): "For ICICI as beneficiary bank use IFSC as ICIC0000011 and 'txnType' as 'TPA'".
+
+---
+
+4️⃣ RTGS Payment
+
+Format: UNIQUEID~AMOUNT~DEBITACC~CREDITACC~PAYEENAME~IFSC~REMARKS~CORPID~USERID~AGGRID~AGGRNAME~URN~TXNTYPE~WORKFLOW_REQD
+
+```
+20261108104500~200001.00~000405002777~000451001611~PratikMundhe~SBIN0003060~Payment~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~RTG~N
+```
+
+Field Value Notes
+UNIQUEID 20261108104500 
+AMOUNT 200001.00 RTGS min is ₹2,00,000
+CREDITACC 000451001611 
+IFSC SBIN0003060 Non-ICICI → RTG type
+TXNTYPE RTG Use TPA for ICICI-to-ICICI
+WORKFLOW_REQD N N = STP (straight-through)
+
+---
+
+5️⃣ IMPS Payment (for completeness)
+
+Format: UNIQUEID~AMOUNT~DEBITACC~CREDITACC~PAYEENAME~IFSC~REMARKS~CORPID~USERID~AGGRID~AGGRNAME~URN~TXNTYPE~WORKFLOW_REQD
+
+```
+20261108110000~100.00~000405002777~0004510002776~TestUser~DLXB0000092~Payment~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~IFS~N
+```
+
+---
+
+6️⃣ NEFT / RTGS Debit Status Check
+
+Format: UNIQUEID~CORPID~USERID~AGGRID~URN
+
+Use the same UNIQUEID/tranRefNo you sent in the payment request:
+
+```
+20261108103000~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMGL
+```
+
+⏱️ Wait ≥30 minutes after payment before calling (per doc Page 9).
+
+---
+
+7️⃣ IMPS Status Check
+
+Format: UNIQUEID~CORPID~USERID~AGGRID~URN
+
+```
+20261108110000~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMGL
+```
+
+---
+
+🔧 Code Replacement (drop-in)
+
+Update your HandleNeftPayment() method — replace the hardcoded value line:
+
+```csharp
+private async Task<string> HandleNeftPayment()
+{
+    // ✅ Test data matched to your CIB: TXBCORP1 / USER1 / TXBCOMP0533 / MANAPPURAMFIN / MANAPPURAMGL
+    string value = "20261108103000~1.00~000405002777~0004510002776~TestUser~DLXB0000092~NEFT transaction~Test~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~RGS";
+    string[] v = value.Split('~');
+    // ... rest of method unchanged
+}
+```
+
+And in HandleNeftRtgsStatusCheck(), replace:
+
+```csharp
+// For NEFT payment tranRefNo above
+string value = "20261108103000~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMGL";
+```
+
+---
+
+⚠️ Critical Reminders from the Document
+
+1. tranRefNo must be unique per request — if you retry with the same ID after a failure, ICICI may reject as duplicate. Use a timestamp (e.g. yyyyMMddHHmmss).
+2. WORKFLOW_REQD = "N" — only if your CIB account has STP enabled. If maker-checker is enforced, set "Y".
+3. Status check timing (Page 9):
+   · NEFT debit status: wait 30 min, max 1x / 30 min
+   · After SUCCESS, wait 60 min for NEFT credit (incremental) check
+4. Cut-off limits (Page 12): Between 7 PM–1 AM, NEFT cumulative cap = ₹10,00,000, RTGS = ₹1,00,00,000. Requests over this will queue until next working day.
+5. URN is case-sensitive — must be exactly MANAPPURAMGL, otherwise CIB will reject with error 9906 ("Invalid Corp Id or User Id Or Aggregator Id").
+
+---
+
+✅ Quick sanity checklist
+
+Check Expected
+CIB registered? ✅ already done
+x-priority for NEFT 0010
+x-priority for RTGS 0001
+x-priority for IMPS WFIMPS
+IFSC for ICICI bene ICIC0000011 + txnType=TPA
+IFSC for non-ICICI bene e.g. SBIN0003060 + txnType=RGS (NEFT) / RTG (RTGS)
+Encryption envelope RSA-OAEP-SHA256 + AES-GCM-256 (per prior fix)
+
+Use the data above directly, and NEFT payment should return a decrypted SUCCESS with a UTRNUMBER from ICICI.
