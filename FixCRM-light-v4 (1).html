@@ -1,4 +1,3 @@
-
     -- ---------------------- ADD ACCOUNTS ---------------------- 
 
     ELSIF p_flag = 'ADD_ACC_GET_NATURE' THEN
@@ -81,6 +80,8 @@
         
         insert into account_profile_dtl (account_no, created_by, created_dt) 
         values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(8), sysdate);
+
+        COMMIT;
 
         OPEN p_as_outresult FOR 
             SELECT 'Success' AS res, 1 AS status FROM dual;
@@ -194,6 +195,8 @@
             END IF;
         END IF;
 
+        COMMIT;
+
         OPEN p_as_outresult FOR SELECT 'Success' AS res, 1 AS status FROM dual;
 
     ELSIF p_flag = 'ADD_SUB_ACC_UPDATE' THEN
@@ -228,6 +231,8 @@
             END IF;
         END IF;
 
+        COMMIT;
+
         OPEN p_as_outresult FOR SELECT 'Success' AS res, 1 AS status FROM dual;
 
     ELSIF p_flag = 'ADD_SUB_ACC_CHECK' THEN
@@ -255,6 +260,7 @@
             select count(*) as cnt 
             from subsidary_master 
             where parent_acc=v_spliter_a(1) and STATUS_ID=1 and account_name=v_spliter_a(2);
+            
     ELSIF p_flag = 'GET_ACTIVE_BRANCHES' THEN
         -- Expected parameters:
         -- v_spliter_a(1) = FIRM_ID
@@ -265,5 +271,3 @@
             WHERE firm_id = TO_NUMBER(v_spliter_a(1)) 
             AND status_id = 1 
             ORDER BY branch_name;
-            
-
