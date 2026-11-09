@@ -1,1 +1,680 @@
 
+using Business.Contracts;
+using Business.Helpers;
+using DataAccess.Dto;
+using DataAccess.Dto.Request;
+using DataAccess.Repository;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Net;
+using System.Globalization;
+using System.IO;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+
+namespace Business.Services
+{
+    public class IciciDcService : IIciciDcService
+    {
+        private readonly IciciDcRepo _iciciDcRepo;
+        private readonly IConfiguration _configuration;
+        private readonly CryptoHelper _crypto;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _certRootPath;
+
+        private static string ICICI_Payment_URL;
+        private static string ICICI_Status_URL;
+        private static string ICICI_CIB_Registration_URL;
+        private static string ICICI_API_Key;
+        private static string ICICI_GenerateToken_URL;
+        private static string ICICI_API_Secret;
+
+        // GCM constants per ICICI spec
+        private const int AES_KEY_SIZE_BYTES = 32;   // 256-bit
+        private const int GCM_IV_SIZE_BYTES = 12;    // 96-bit
+        private const int GCM_TAG_SIZE_BYTES = 16;   // 128-bit
+
+        public IciciDcService(
+            IciciDcRepo iciciDcRepo,
+            IConfiguration configuration,
+            CryptoHelper crypto,
+            IHttpClientFactory httpClientFactory, string certRootPath)
+        {
+            _iciciDcRepo = iciciDcRepo;
+            _configuration = configuration;
+            _crypto = crypto;
+            _httpClientFactory = httpClientFactory;
+            ICICI_Payment_URL = _configuration["IciciPayment:token:ICICI_Payment_URL"];
+            ICICI_Status_URL = _configuration["IciciPayment:token:ICICI_Status_URL"];
+            ICICI_CIB_Registration_URL = _configuration["IciciPayment:token:ICICI_CIB_Registration_URL"];
+            ICICI_API_Key = _configuration["IciciPayment:token:ICICI_API_Key"];
+            ICICI_GenerateToken_URL = _configuration["IciciPayment:token:ICICI_GenerateToken_URL"];
+            ICICI_API_Secret = _configuration["IciciPayment:token:ICICI_API_Secret"];
+            _certRootPath = certRootPath;
+        }
+
+        public async Task<dynamic> AuthenticateUser(PostReqDto postReqDto)
+        {
+            return await _iciciDcRepo.IciciDcPostRepo(postReqDto);
+        }
+
+        public async Task<dynamic> IciciDcPostEncryptService(PostEncReqDto postReqDto)
+        {
+            var Tag = postReqDto.Tag;
+            var CipherText = postReqDto.pagevalue;
+            var Nonce = postReqDto.Nonce;
+            var Decrypted_Data = await _crypto.DecriptedText(CipherText, Nonce, Tag);
+            string[] decrypt_val = Decrypted_Data.Split('$');
+            postReqDto.pagevalue = decrypt_val[0];
+
+            PostReqDto requestDto = new PostReqDto();
+            requestDto.p_flag = postReqDto.flag;
+            requestDto.p_pagevalue = postReqDto.pagevalue;
+            requestDto.p_paravalue = postReqDto.paravalue;
+
+            switch (requestDto.p_flag)
+            {
+                case "IMPS_STATUS_CHECK":
+                    return await HandleImpsStatusCheck();
+                case "IMPS_INQUIRY":
+                    return await HandleImpsInquiry();
+                case "NEFT_PAYMENT":
+                    return await HandleNeftPayment();
+                case "RTGS_PAYMENT":
+                    return await HandleRtgsPayment();
+                case "NEFT_RTGS_STATUS_CHECK":
+                    return await HandleNeftRtgsStatusCheck(requestDto);
+                case "CIB_REGISTRATION":
+                    return await HandleCibRegistration(requestDto);
+                default:
+                    return await _iciciDcRepo.IciciDcPostRepo(requestDto);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  HANDLERS
+        // ─────────────────────────────────────────────────────────────
+
+        private async Task<string> HandleImpsStatusCheck()
+        {
+            string decData = "";
+            string service = "PaymentApi";
+
+            string value = "20261106145500~SESPRODUCT~TECH1~TXBCOMP0260~574763144";
+            string[] v = value.Split('~');
+
+            try
+            {
+                WriteToFile("<IMPS Status INQ Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string uniqueId = v.Length > 0 ? v[0] : "";
+                string corpId   = v.Length > 1 ? v[1] : "";
+                string userId   = v.Length > 2 ? v[2] : "";
+                string aggrId   = v.Length > 3 ? v[3] : "";
+                string urn      = v.Length > 4 ? v[4] : "";
+
+                string request = "{\"AGGRID\":\"" + aggrId + "\",\"CORPID\":\"" + corpId +
+                                 "\",\"USERID\":\"" + userId + "\",\"URN\":\"" + urn +
+                                 "\",\"UNIQUEID\":\"" + uniqueId + "\"}";
+
+                WriteToFile("IMPS Status Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, uniqueId, service);
+
+                string response = PostJson(ICICI_Status_URL, json, authToken, "0100");
+                decData = ProcessResponse(response);
+
+                WriteToFile("IMPS Status Decrypted: " + decData);
+
+                JObject jo = JObject.Parse(decData);
+                if (jo.SelectToken("ImpsResponse") != null)
+                {
+                    JObject r = JObject.Parse(jo["ImpsResponse"].ToString());
+                    string actCode  = r["ActCode"]?.ToString() ?? "0";
+                    string response2 = r["Response"]?.ToString() ?? "0";
+                    string tranRef  = r["TranRefNo"]?.ToString() ?? "0";
+                    string bankRrn  = r["BankRRN"]?.ToString() ?? "0";
+                    decData = $"1~{tranRef}~{actCode}~{response2}~{bankRrn}";
+                }
+                else
+                {
+                    string status = jo["STATUS"]?.ToString() ?? "UNKNOWN";
+                    bool ok = status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase);
+                    decData = $"{(ok ? "1" : "9")}~{jo["UNIQUEID"]}~{jo["UTRNUMBER"]}~{status}~{jo["MESSAGE"] ?? jo["RESPONSE"]}";
+                }
+            }
+            catch (Exception ex)
+            {
+                decData = "iciciimpsstatus Error: " + ex.Message;
+                WriteToFile(decData);
+            }
+
+            WriteToFile("<IMPS Status INQ End> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+            return decData;
+        }
+
+        private async Task<string> HandleImpsInquiry()
+        {
+            string service = "PaymentApi";
+            string value = "20261106134500~100.00~000405002777~0004510002776~TestUser~DLXB0000092~Payment~SESPRODUCT~TECH1~TXBCOMP0260~NATIONAL~574763144~IFS~N";
+            string[] v = value.Split('~');
+
+            try
+            {
+                WriteToFile("<IMPS Payment Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string request = "{\"AGGRID\":\"" + v[9] + "\",\"CORPID\":\"" + v[7] +
+                                 "\",\"USERID\":\"" + v[8] + "\",\"URN\":\"" + v[11] +
+                                 "\",\"AGGRNAME\":\"" + v[10] + "\",\"UNIQUEID\":\"" + v[0] +
+                                 "\",\"DEBITACC\":\"" + v[2] + "\",\"CREDITACC\":\"" + v[3] +
+                                 "\",\"IFSC\":\"" + v[5] + "\",\"AMOUNT\":\"" + v[1] +
+                                 "\",\"CURRENCY\":\"INR\",\"TXNTYPE\":\"IFS\",\"PAYEENAME\":\"" + v[4] +
+                                 "\",\"REMARKS\":\"" + v[6] + "\",\"WORKFLOW_REQD\":\"N\",\"BENLEI\":\"\"}";
+
+                WriteToFile("IMPS Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, v[0], service);
+
+                string response = PostJson(ICICI_Payment_URL, json, authToken, "WFIMPS");
+                string decrypted = ProcessResponse(response);
+                WriteToFile("IMPS Final Decrypted: " + decrypted);
+
+                JObject jo = JObject.Parse(decrypted);
+                string status = jo["STATUS"]?.ToString() ?? "";
+                bool ok = status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase);
+                return $"{(ok ? "1" : "9")}~{jo["UNIQUEID"] ?? v[0]}~{jo["UTRNUMBER"] ?? "0"}~{jo["ERRORCODE"] ?? "0"}~{jo["RESPONSE"] ?? ""}";
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("IMPS Error: " + ex.Message);
+                return "9~" + (v.Length > 0 ? v[0] : "UNKNOWN") + "~" + ex.Message;
+            }
+        }
+
+        private async Task<string> HandleNeftPayment()
+        {
+            string value = "20261107150000~1.00~000405002777~0004510002776~TestUser~DLXB0000092~NEFT transaction~Test~TXBCORP1~USER1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~RGS";
+            string[] v = value.Split('~');
+
+            try
+            {
+                WriteToFile("<NEFT Payment Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string request = "{\"tranRefNo\":\"" + v[0] + "\",\"amount\":\"" + v[1] +
+                                 "\",\"senderAcctNo\":\"" + v[2] + "\",\"beneAccNo\":\"" + v[3] +
+                                 "\",\"beneName\":\"" + v[4] + "\",\"beneIFSC\":\"" + v[5] +
+                                 "\",\"narration1\":\"" + v[6] + "\",\"narration2\":\"" + v[7] +
+                                 "\",\"crpId\":\"" + v[8] + "\",\"crpUsr\":\"" + v[9] +
+                                 "\",\"aggrId\":\"" + v[10] + "\",\"aggrName\":\"" + v[11] +
+                                 "\",\"urn\":\"" + v[12] + "\",\"txnType\":\"" + v[13] +
+                                 "\",\"WORKFLOW_REQD\":\"N\"}";
+
+                WriteToFile("NEFT Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, v[0], "PaymentApi");
+
+                string response = PostJson(ICICI_Payment_URL, json, authToken, "0010");
+                return ProcessResponse(response);
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("NEFT Error: " + ex.Message);
+                return ex.Message;
+            }
+        }
+
+        private async Task<string> HandleRtgsPayment()
+        {
+            string value = "20261106145500~200001.00~000405002777~000451001611~PratikMundhe~SBIN0003060~Payment~SESPRODUCT~TECH1~TXBCOMP0260~NATIONAL~574763144~RTG~N";
+            string[] v = value.Split('~');
+
+            try
+            {
+                WriteToFile("<RTGS Payment Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string request = "{\"AGGRID\":\"" + v[9] + "\",\"CORPID\":\"" + v[7] +
+                                 "\",\"USERID\":\"" + v[8] + "\",\"URN\":\"" + v[11] +
+                                 "\",\"AGGRNAME\":\"" + v[10] + "\",\"UNIQUEID\":\"" + v[0] +
+                                 "\",\"DEBITACC\":\"" + v[2] + "\",\"CREDITACC\":\"" + v[3] +
+                                 "\",\"IFSC\":\"" + v[5] + "\",\"AMOUNT\":\"" + v[1] +
+                                 "\",\"CURRENCY\":\"INR\",\"TXNTYPE\":\"" + v[12] +
+                                 "\",\"PAYEENAME\":\"" + v[4] + "\",\"REMARKS\":\"" + v[6] +
+                                 "\",\"WORKFLOW_REQD\":\"" + v[13] + "\",\"BENLEI\":\"\"}";
+
+                WriteToFile("RTGS Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, v[0], "PaymentApi");
+
+                string response = PostJson(ICICI_Payment_URL, json, authToken, "0001");
+                string decrypted = ProcessResponse(response);
+                WriteToFile("RTGS Final Decrypted: " + decrypted);
+
+                JObject jo = JObject.Parse(decrypted);
+                string status = jo["STATUS"]?.ToString() ?? "";
+                bool ok = status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase);
+                return $"{(ok ? "1" : "9")}~{jo["UNIQUEID"] ?? v[0]}~{jo["UTRNUMBER"] ?? "0"}~{jo["ERRORCODE"] ?? "0"}~{jo["RESPONSE"] ?? ""}";
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("RTGS Error: " + ex.Message);
+                return "9~" + (v.Length > 0 ? v[0] : "UNKNOWN") + "~" + ex.Message;
+            }
+        }
+
+        private async Task<string> HandleNeftRtgsStatusCheck(PostReqDto requestDto)
+        {
+            string service = "PaymentApi";
+            string[] v = requestDto.p_pagevalue.Split('~');
+
+            try
+            {
+                WriteToFile("<Debit Status INQ Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string uniqueId = v.Length > 0 ? v[0] : "";
+                string corpId   = v.Length > 1 ? v[1] : "";
+                string userId   = v.Length > 2 ? v[2] : "";
+                string aggrId   = v.Length > 3 ? v[3] : "";
+                string urn      = v.Length > 4 ? v[4] : "";
+
+                string request = "{\"AGGRID\":\"" + aggrId + "\",\"CORPID\":\"" + corpId +
+                                 "\",\"USERID\":\"" + userId + "\",\"URN\":\"" + urn +
+                                 "\",\"UNIQUEID\":\"" + uniqueId + "\"}";
+
+                WriteToFile("Debit Status Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, uniqueId, service);
+
+                string response = PostJson(ICICI_Status_URL, json, authToken, "0010");
+                string decrypted = ProcessResponse(response);
+                WriteToFile("Debit Status Decrypted: " + decrypted);
+
+                JObject jo = JObject.Parse(decrypted);
+                string status = jo["STATUS"]?.ToString() ?? "UNKNOWN";
+                bool ok = status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase);
+                return $"{(ok ? "1" : "9")}~{jo["UNIQUEID"] ?? uniqueId}~{jo["UTRNUMBER"] ?? "0"}~{status}~{jo["MESSAGE"] ?? jo["RESPONSE"] ?? ""}";
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("Debit Status Error: " + ex.Message);
+                return "9~" + (v.Length > 0 ? v[0] : "UNKNOWN") + "~" + ex.Message;
+            }
+        }
+
+        private async Task<string> HandleCibRegistration(PostReqDto requestDto)
+        {
+            string service = "CorporateApi";
+            string[] v = requestDto.p_pagevalue.Split('~');
+
+            try
+            {
+                WriteToFile("<CIB Registration Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                string authToken = GenerateOAuthToken();
+                if (string.IsNullOrEmpty(authToken))
+                    return "9~OAuth Token Generation Failed";
+
+                string aliasIdStr = string.IsNullOrWhiteSpace(v[5]) ? "null" : "\"" + v[5] + "\"";
+                string request = "{\"CORPID\":\"" + v[0] + "\",\"USERID\":\"" + v[1] +
+                                 "\",\"AGGRNAME\":\"" + v[2] + "\",\"AGGRID\":\"" + v[3] +
+                                 "\",\"URN\":\"" + v[4] + "\",\"ALIASID\":" + aliasIdStr + "}";
+
+                WriteToFile("CIB Reg Plain Request: " + request);
+                string json = BuildEncryptedEnvelope(request, "", service);
+
+                string response = PostJson(ICICI_CIB_Registration_URL, json, authToken, null);
+                return ProcessResponse(response);
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("CIB Registration Error: " + ex.Message);
+                return ex.Message;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  CORE ENCRYPTION / DECRYPTION  ✅ FIXED
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Builds the complete encrypted JSON envelope:
+        /// {
+        ///   "requestId": "...",
+        ///   "service": "...",
+        ///   "encryptedKey": "<RSA-OAEP-SHA256(32-byte AES key)>",
+        ///   "oaepHashingAlgorithm": "NONE",
+        ///   "iv": "",
+        ///   "encryptedData": "<Base64(IV(12) || ciphertext || tag(16))>",
+        ///   "clientInfo": "",
+        ///   "optionalParam": ""
+        /// }
+        /// </summary>
+        private string BuildEncryptedEnvelope(string plainRequestJson, string requestId, string service)
+        {
+            // 1. Generate a fresh 256-bit AES session key
+            byte[] aesKey = RandomNumberGenerator.GetBytes(AES_KEY_SIZE_BYTES);
+
+            // 2. Encrypt the AES session key using RSA-OAEP-SHA256 (per ICICI spec)
+            string encryptedKeyB64 = RsaEncryptOaepSha256(aesKey);
+
+            // 3. AES-256-GCM encrypt the payload with a fresh 12-byte IV
+            string encryptedDataB64 = AesGcmEncryptPrependedIv(plainRequestJson, aesKey);
+
+            // 4. Build the envelope
+            var envelope = new JObject
+            {
+                ["requestId"] = requestId ?? "",
+                ["service"] = service,
+                ["encryptedKey"] = encryptedKeyB64,
+                ["oaepHashingAlgorithm"] = "NONE",  // per doc, "NONE" used when default OAEP SHA256 is implied
+                ["iv"] = "",                        // empty => Pattern A: IV is prepended in encryptedData
+                ["encryptedData"] = encryptedDataB64,
+                ["clientInfo"] = "",
+                ["optionalParam"] = ""
+            };
+
+            return envelope.ToString(Formatting.None);
+        }
+
+        /// <summary>
+        /// Encrypts plaintext with AES-256-GCM.
+        /// Returns Base64( IV(12) || ciphertext || tag(16) )  => "Pattern A"
+        /// </summary>
+        private string AesGcmEncryptPrependedIv(string plaintext, byte[] aesKey)
+        {
+            byte[] iv = RandomNumberGenerator.GetBytes(GCM_IV_SIZE_BYTES);
+            byte[] plainBytes = Encoding.UTF8.GetBytes(plaintext);
+            byte[] cipherBytes = new byte[plainBytes.Length];
+            byte[] tag = new byte[GCM_TAG_SIZE_BYTES];
+
+            using (var gcm = new AesGcm(aesKey, GCM_TAG_SIZE_BYTES))
+            {
+                gcm.Encrypt(iv, plainBytes, cipherBytes, tag);
+            }
+
+            // combined = IV || ciphertext || tag
+            byte[] combined = new byte[GCM_IV_SIZE_BYTES + cipherBytes.Length + GCM_TAG_SIZE_BYTES];
+            Buffer.BlockCopy(iv, 0, combined, 0, GCM_IV_SIZE_BYTES);
+            Buffer.BlockCopy(cipherBytes, 0, combined, GCM_IV_SIZE_BYTES, cipherBytes.Length);
+            Buffer.BlockCopy(tag, 0, combined, GCM_IV_SIZE_BYTES + cipherBytes.Length, GCM_TAG_SIZE_BYTES);
+
+            return Convert.ToBase64String(combined);
+        }
+
+        /// <summary>
+        /// Decrypts response from ICICI:
+        ///   - Decrypt encryptedKey with RSA private key (OAEP-SHA256) -> 32-byte AES key
+        ///   - Base64-decode encryptedData -> first 12 bytes = IV, last 16 = tag, middle = ciphertext
+        ///   - AES-256-GCM decrypt
+        /// </summary>
+        private string ProcessResponse(string rawHttpResponse)
+        {
+            JObject jo = JObject.Parse(rawHttpResponse);
+
+            string resData = jo["encryptedData"]?.ToString();
+            string resKey  = jo["encryptedKey"]?.ToString();
+
+            if (string.IsNullOrEmpty(resData) || string.IsNullOrEmpty(resKey))
+                throw new Exception("ICICI response missing encryptedData or encryptedKey. Raw: " + rawHttpResponse);
+
+            // 1. Decrypt AES session key using RSA private key with OAEP-SHA256
+            byte[] aesKey = RsaDecryptOaepSha256(resKey);
+
+            // 2. Decode combined payload
+            byte[] combined = Convert.FromBase64String(resData);
+
+            if (combined.Length < GCM_IV_SIZE_BYTES + GCM_TAG_SIZE_BYTES)
+                throw new Exception("Encrypted payload too short: " + combined.Length + " bytes");
+
+            byte[] iv         = new byte[GCM_IV_SIZE_BYTES];
+            byte[] tag        = new byte[GCM_TAG_SIZE_BYTES];
+            int cipherLen     = combined.Length - GCM_IV_SIZE_BYTES - GCM_TAG_SIZE_BYTES;
+            byte[] ciphertext = new byte[cipherLen];
+
+            Buffer.BlockCopy(combined, 0, iv, 0, GCM_IV_SIZE_BYTES);
+            Buffer.BlockCopy(combined, GCM_IV_SIZE_BYTES, ciphertext, 0, cipherLen);
+            Buffer.BlockCopy(combined, GCM_IV_SIZE_BYTES + cipherLen, tag, 0, GCM_TAG_SIZE_BYTES);
+
+            // 3. AES-256-GCM decrypt
+            byte[] plainBytes = new byte[cipherLen];
+            using (var gcm = new AesGcm(aesKey, GCM_TAG_SIZE_BYTES))
+            {
+                gcm.Decrypt(iv, ciphertext, tag, plainBytes);
+            }
+
+            return Encoding.UTF8.GetString(plainBytes);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  RSA OAEP-SHA256 helpers  ✅ FIXED
+        // ─────────────────────────────────────────────────────────────
+
+        private string RsaEncryptOaepSha256(byte[] plainBytes)
+        {
+            using (X509Certificate2 cert = GetPublicCertificate())
+            using (RSA rsa = cert.GetRSAPublicKey())
+            {
+                if (rsa == null)
+                    throw new Exception("Public certificate does not contain an RSA public key.");
+
+                // ✅ RSA/ECB/OAEPWithSHA-256AndMGF1Padding
+                byte[] encrypted = rsa.Encrypt(plainBytes, RSAEncryptionPadding.OaepSHA256);
+                return Convert.ToBase64String(encrypted);
+            }
+        }
+
+        private byte[] RsaDecryptOaepSha256(string cipherB64)
+        {
+            using (X509Certificate2 cert = GetPrivateCertificate())
+            using (RSA rsa = cert.GetRSAPrivateKey())
+            {
+                if (rsa == null)
+                    throw new InvalidOperationException("Private certificate does not contain a valid RSA private key.");
+
+                byte[] cipherBytes = Convert.FromBase64String(cipherB64);
+
+                // ✅ RSA/ECB/OAEPWithSHA-256AndMGF1Padding
+                return rsa.Decrypt(cipherBytes, RSAEncryptionPadding.OaepSHA256);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  HTTP helper
+        // ─────────────────────────────────────────────────────────────
+
+        private string PostJson(string url, string body, string bearerToken, string xPriority)
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+            req.Headers["apikey"] = ICICI_API_Key;
+            req.Headers["Authorization"] = "Bearer " + bearerToken;
+            if (!string.IsNullOrEmpty(xPriority))
+                req.Headers["x-priority"] = xPriority;
+            req.ContentType = "application/json";
+            req.Accept = "application/json";
+            req.Method = "POST";
+
+            byte[] bytes = Encoding.UTF8.GetBytes(body);
+            using (Stream s = req.GetRequestStream())
+                s.Write(bytes, 0, bytes.Length);
+
+            WriteToFile("POST " + url + " Body: " + body);
+
+            using (WebResponse resp = req.GetResponse())
+            using (Stream rs = resp.GetResponseStream())
+            using (StreamReader sr = new StreamReader(rs, Encoding.UTF8))
+            {
+                string raw = sr.ReadToEnd();
+                WriteToFile("Raw Response: " + raw);
+                return raw;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  Certificate loaders
+        // ─────────────────────────────────────────────────────────────
+
+        private X509Certificate2 GetPublicCertificate()
+        {
+            string path = Path.Combine(_certRootPath, "Certificates", "Public_cer", "Composite-UAT.cer");
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Public certificate not found: {path}");
+
+            var cert = new X509Certificate2(path);
+            WriteToFile("<PUBLIC KEY LOADED> Thumbprint: " + cert.Thumbprint);
+            return cert;
+        }
+
+        private X509Certificate2 GetPrivateCertificate()
+        {
+            string path = Path.Combine(_certRootPath, "Certificates", "Private_cer", "manappuram.net_2026.pfx");
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Private PFX not found: {path}");
+
+            var cert = new X509Certificate2(path, "mana@123", X509KeyStorageFlags.PersistKeySet);
+            if (!cert.HasPrivateKey)
+                throw new InvalidOperationException("PFX does not contain a private key.");
+
+            WriteToFile("<PRIVATE KEY LOADED> Thumbprint: " + cert.Thumbprint);
+            return cert;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  OAuth
+        // ─────────────────────────────────────────────────────────────
+
+        public async Task<dynamic> IciciDcPostService(PostReqDto postReqDto)
+        {
+            PostReqDto requestDto = new PostReqDto();
+            requestDto.p_flag = postReqDto.p_flag;
+            requestDto.p_pagevalue = postReqDto.p_pagevalue;
+            requestDto.p_paravalue = postReqDto.p_paravalue;
+            return await _iciciDcRepo.IciciDcPostRepo(requestDto);
+        }
+
+        public string GenerateAppToken(string walletId, string unqRefId)
+        {
+            var secretKey = _configuration["Jwt:Key"];
+            var key = Encoding.ASCII.GetBytes(secretKey);
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim("WalletId", walletId),
+                    new Claim("UnqRefId", unqRefId)
+                }),
+                Issuer = _configuration["Jwt:Issuer"],
+                IssuedAt = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddMinutes(30),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var result = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(result);
+        }
+
+        private string GenerateOAuthToken()
+        {
+            try
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                WriteToFile("<ICICI_GenerateToken_URL> " + ICICI_GenerateToken_URL);
+
+                HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(ICICI_GenerateToken_URL);
+
+                string authString = ICICI_API_Key + ":" + ICICI_API_Secret;
+                string base64Auth = Convert.ToBase64String(Encoding.UTF8.GetBytes(authString));
+
+                webRequest.Headers["apikey"] = ICICI_API_Key;
+                webRequest.Headers["Authorization"] = "Basic " + base64Auth;
+                webRequest.ContentType = "application/x-www-form-urlencoded";
+                webRequest.Method = "POST";
+
+                string postData = "grant_type=client_credentials";
+                byte[] postBytes = Encoding.UTF8.GetBytes(postData);
+                webRequest.ContentLength = postBytes.Length;
+
+                using (Stream outputstream = webRequest.GetRequestStream())
+                    outputstream.Write(postBytes, 0, postBytes.Length);
+
+                using (WebResponse myWebResponse = webRequest.GetResponse())
+                using (Stream ReceiveStream = myWebResponse.GetResponseStream())
+                using (StreamReader readStream = new StreamReader(ReceiveStream, Encoding.UTF8))
+                {
+                    string response = readStream.ReadToEnd();
+                    JObject joResponse = JObject.Parse(response);
+                    return joResponse.SelectToken("access_token")?.ToString() ?? "";
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteToFile("Token Generation Failed: " + ex.Message);
+                return string.Empty;
+            }
+        }
+
+        public void WriteToFile(string Message)
+        {
+            string path = Path.Combine(_certRootPath, "Logs");
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+
+            string dateStr = DateTime.Now.ToString("yyyy_MM_dd");
+            string filepath = Path.Combine(path, $"ServiceLog_{dateStr}.txt");
+
+            using (StreamWriter sw = new StreamWriter(filepath, append: true))
+                sw.WriteLine(Message);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  Model classes (unchanged)
+        // ─────────────────────────────────────────────────────────────
+
+        public class GeneratepaymentEncrypted
+        {
+            public string? CRPID { get; set; }
+            public string? AGGRID { get; set; }
+            public string? AGGRNAME { get; set; }
+            public string? USERID { get; set; }
+            public string? URN { get; set; }
+            public string? ALIASID { get; set; }
+        }
+
+        public class Generatepaymentinquiry
+        {
+            public string? request { get; set; }
+            public string? tranRefNo { get; set; }
+            public string? UTRNUMBER { get; }
+        }
+
+        public class PaymentRequest
+        {
+            public string request { get; set; }
+        }
+    }
+}
