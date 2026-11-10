@@ -1,17 +1,18 @@
+Based on the provided image showing the database link usage, here is the updated PL/SQL code. Every table reference now includes the mavef. prefix and the @UATR_BACKUP4 suffix, while keeping the original queries, logic, and COMMIT; statements intact.
     -- ---------------------- ADD ACCOUNTS ---------------------- 
 
     ELSIF p_flag = 'ADD_ACC_GET_NATURE' THEN
         -- No parameters required
         OPEN p_as_outresult FOR
             select a.nature_no, a.accnature_name || ' | ' || chr(32) ||a.nature_no as accnature_name 
-            from mavef.account_nature a;
+            from mavef.account_nature@UATR_BACKUP4 a;
 
     ELSIF p_flag = 'ADD_ACC_GET_SCHEDULE' THEN
         -- Expected parameters:
         -- v_spliter_a(1) = NATURE_NO
         OPEN p_as_outresult FOR
             select a.schedule_no, a.schedule_name || ' | ' || chr(32) ||a.schedule_no as schedule_name 
-            from mavef.account_schedule a 
+            from mavef.account_schedule@UATR_BACKUP4 a 
             where a.nature_no = TO_NUMBER(v_spliter_a(1)) 
             order by a.schedule_no;
 
@@ -20,7 +21,7 @@
         -- v_spliter_a(1) = SHEDULE_NO
         OPEN p_as_outresult FOR
             select a.subschedule_no, a.subschedule_name || ' | ' || chr(32) ||a.subschedule_no as subschedule_name 
-            from mavef.account_subschedule a 
+            from mavef.account_subschedule@UATR_BACKUP4 a 
             where a.schedule_no = TO_NUMBER(v_spliter_a(1)) 
             order by a.subschedule_no;
 
@@ -28,7 +29,7 @@
         -- No parameters required
         OPEN p_as_outresult FOR
             select t.status_id, t.description as SubType 
-            from mavef.status_master t 
+            from mavef.status_master@UATR_BACKUP4 t 
             where t.module_id=1 and t.option_id=18;
 
     ELSIF p_flag = 'ADD_ACC_CHECK_PROFILE' THEN
@@ -38,7 +39,7 @@
         -- v_spliter_a(3) = SUB_SHEDULE_NO
         OPEN p_as_outresult FOR
             select count(*) as cnt 
-            from mavef.account_profile 
+            from mavef.account_profile@UATR_BACKUP4 
             where nature_no = TO_NUMBER(v_spliter_a(1)) 
             and SCHEDULE_NO = TO_NUMBER(v_spliter_a(2)) 
             and SUBSCHEDULE_NO = TO_NUMBER(v_spliter_a(3));
@@ -48,7 +49,7 @@
         -- v_spliter_a(1) = ACCOUNT_NO
         OPEN p_as_outresult FOR
             select count(*) as cnt 
-            from mavef.account_profile 
+            from mavef.account_profile@UATR_BACKUP4 
             where account_no = TO_NUMBER(v_spliter_a(1));
 
     ELSIF p_flag = 'ADD_ACC_CHECK_NAME' THEN
@@ -56,7 +57,7 @@
         -- v_spliter_a(1) = ACCOUNT_NAME
         OPEN p_as_outresult FOR
             select count(*) as cnt 
-            from mavef.account_profile 
+            from mavef.account_profile@UATR_BACKUP4 
             where account_name = v_spliter_a(1);
     
    
@@ -71,14 +72,14 @@
         -- v_spliter_a(7) = HOSTATUS
         -- v_spliter_a(8) = USERID
         
-        insert into mavef.account_profile(account_no, account_name, ho_status, subschedule_no, schedule_no, nature_no) 
+        insert into mavef.account_profile@UATR_BACKUP4(account_no, account_name, ho_status, subschedule_no, schedule_no, nature_no) 
         values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(2), 0, TO_NUMBER(v_spliter_a(3)), TO_NUMBER(v_spliter_a(4)), TO_NUMBER(v_spliter_a(5)));
         
-        insert into mavef.account_status 
+        insert into mavef.account_status@UATR_BACKUP4 
         select v_spliter_a(6), b.branch_id, TO_NUMBER(v_spliter_a(1)), TO_NUMBER(v_spliter_a(7)) 
-        from mavef.branch_master b;
+        from mavef.branch_master@UATR_BACKUP4 b;
         
-        insert into mavef.account_profile_dtl (account_no, created_by, created_dt) 
+        insert into mavef.account_profile_dtl@UATR_BACKUP4 (account_no, created_by, created_dt) 
         values(TO_NUMBER(v_spliter_a(1)), v_spliter_a(8), sysdate);
 
         COMMIT;
@@ -100,13 +101,13 @@
             IF v_spliter_a(2) = '1' THEN
                 OPEN p_as_outresult FOR
                     select distinct a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  
-                    from mavef.account_profile a, mavef.account_status b  
+                    from mavef.account_profile@UATR_BACKUP4 a, mavef.account_status@UATR_BACKUP4 b  
                     where b.firm_id = v_spliter_a(3) and a.account_no=b.account_no and b.status_id in (2,3) 
                     order by a.account_name;
             ELSE
                 OPEN p_as_outresult FOR
                     select a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  
-                    from mavef.account_profile a, mavef.account_status b  
+                    from mavef.account_profile@UATR_BACKUP4 a, mavef.account_status@UATR_BACKUP4 b  
                     where b.firm_id = v_spliter_a(3) and b.branch_id = v_spliter_a(4) and a.account_no=b.account_no and b.status_id in (2,3) 
                     order by a.account_name;
             END IF;
@@ -114,13 +115,13 @@
             IF v_spliter_a(2) = '1' THEN
                 OPEN p_as_outresult FOR
                     select distinct a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  
-                    from mavef.account_profile a, mavef.account_status b  
+                    from mavef.account_profile@UATR_BACKUP4 a, mavef.account_status@UATR_BACKUP4 b  
                     where b.firm_id = v_spliter_a(3) and a.account_no=b.account_no and b.status_id in (2,3) 
                     order by a.account_no;
             ELSE
                 OPEN p_as_outresult FOR
                     select a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  
-                    from mavef.account_profile a, mavef.account_status b  
+                    from mavef.account_profile@UATR_BACKUP4 a, mavef.account_status@UATR_BACKUP4 b  
                     where b.firm_id = v_spliter_a(3) and b.branch_id = v_spliter_a(4) and a.account_no=b.account_no and b.status_id in (2,3) 
                     order by a.account_no;
             END IF;
@@ -138,20 +139,20 @@
             IF v_spliter_a(2) = '1' THEN
                 OPEN p_as_outresult FOR
                     SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
-                    from mavef.subsidary_master 
+                    from mavef.subsidary_master@UATR_BACKUP4 
                     where parent_acc=TO_NUMBER(v_spliter_a(3)) and firm_id=TO_NUMBER(v_spliter_a(4)) and status_id=1 
                     group by account_no, account_name,firm_id order by account_name;
             ELSE
                 OPEN p_as_outresult FOR
                     SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
-                    from mavef.subsidary_master 
+                    from mavef.subsidary_master@UATR_BACKUP4 
                     where parent_acc=TO_NUMBER(v_spliter_a(3)) and branch_id=TO_NUMBER(v_spliter_a(5)) and firm_id=TO_NUMBER(v_spliter_a(4)) and status_id=1 
                     order by account_name;
             END IF;
         ELSIF v_spliter_a(1) = 'All' THEN
             OPEN p_as_outresult FOR
                 SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
-                from mavef.subsidary_master 
+                from mavef.subsidary_master@UATR_BACKUP4 
                 where parent_acc=TO_NUMBER(v_spliter_a(3)) and firm_id=TO_NUMBER(v_spliter_a(4)) and status_id=1 
                 group by account_no, account_name,firm_id order by account_name;
         END IF;
@@ -169,29 +170,29 @@
         IF v_spliter_a(1) = 'Branch' THEN
             SELECT CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN TO_NUMBER(v_spliter_a(2))+1 ELSE MAX(ACCOUNT_NO)+1 END 
             INTO v_cnt 
-            FROM mavef.subsidary_master 
+            FROM mavef.subsidary_master@UATR_BACKUP4 
             WHERE PARENT_ACC = v_spliter_a(2);
             
-            insert into mavef.subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+            insert into mavef.subsidary_master@UATR_BACKUP4(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
             values(TO_NUMBER(v_spliter_a(3)), TO_NUMBER(v_spliter_a(4)), TO_NUMBER(v_spliter_a(2)), v_cnt, v_spliter_a(5), 0, 'C', 1, 0);
             
         ELSIF v_spliter_a(1) = 'All' THEN
             IF v_spliter_a(7) = '0' THEN
                 SELECT CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN TO_NUMBER(v_spliter_a(2))+1 ELSE MAX(ACCOUNT_NO)+1 END 
                 INTO v_cnt 
-                FROM mavef.subsidary_master 
+                FROM mavef.subsidary_master@UATR_BACKUP4 
                 WHERE PARENT_ACC = v_spliter_a(2);
                 
-                insert into mavef.subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+                insert into mavef.subsidary_master@UATR_BACKUP4(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
                 SELECT a.FIRM_ID, a.BRANCH_ID, TO_NUMBER(v_spliter_a(2)), v_cnt, v_spliter_a(5), 0, 'C', 1, 0 
-                from mavef.active_firms a inner join mavef.branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER(v_spliter_a(3));
+                from mavef.active_firms@UATR_BACKUP4 a inner join mavef.branch_master@UATR_BACKUP4 b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER(v_spliter_a(3));
                 
-                insert into mavef.subsidary_mst_modify(PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,MODIFIED_BY,MODIFIED_DT) 
+                insert into mavef.subsidary_mst_modify@UATR_BACKUP4(PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,MODIFIED_BY,MODIFIED_DT) 
                 values(v_spliter_a(2), v_cnt, v_spliter_a(5), v_spliter_a(6), sysdate);
             ELSE
-                insert into mavef.subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+                insert into mavef.subsidary_master@UATR_BACKUP4(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
                 SELECT a.FIRM_ID, a.BRANCH_ID, TO_NUMBER(v_spliter_a(2)), TO_NUMBER(v_spliter_a(7)), v_spliter_a(5), 0, 'C', 1, 0 
-                from mavef.active_firms a inner join mavef.branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER(v_spliter_a(3));
+                from mavef.active_firms@UATR_BACKUP4 a inner join mavef.branch_master@UATR_BACKUP4 b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER(v_spliter_a(3));
             END IF;
         END IF;
 
@@ -210,23 +211,23 @@
         -- v_spliter_a(7) = SUB_ID
         
         IF v_spliter_a(1) = 'Branch' THEN
-            update mavef.subsidary_master set ACCOUNT_NAME=v_spliter_a(2) 
+            update mavef.subsidary_master@UATR_BACKUP4 set ACCOUNT_NAME=v_spliter_a(2) 
             where ACCOUNT_NO=v_spliter_a(3) and PARENT_ACC=v_spliter_a(4) and BRANCH_ID=v_spliter_a(5);
             
         ELSIF v_spliter_a(1) = 'All' THEN
-            INSERT INTO mavef.subsidary_mst_modify_his (parent_acc, account_no, account_name, modified_by, modified_dt) 
+            INSERT INTO mavef.subsidary_mst_modify_his@UATR_BACKUP4 (parent_acc, account_no, account_name, modified_by, modified_dt) 
             SELECT t.parent_acc, t.account_no, t.account_name, t.modified_by, t.modified_dt 
-            FROM mavef.subsidary_mst_modify t 
+            FROM mavef.subsidary_mst_modify@UATR_BACKUP4 t 
             WHERE t.parent_acc=v_spliter_a(4) AND t.account_no=v_spliter_a(3);
             
             IF v_spliter_a(7) = '0' THEN
-                UPDATE mavef.subsidary_master SET ACCOUNT_NAME=v_spliter_a(2) 
+                UPDATE mavef.subsidary_master@UATR_BACKUP4 SET ACCOUNT_NAME=v_spliter_a(2) 
                 WHERE ACCOUNT_NO=v_spliter_a(3) AND PARENT_ACC=v_spliter_a(4);
                 
-                UPDATE mavef.subsidary_mst_modify SET ACCOUNT_NAME=v_spliter_a(2), MODIFIED_DT=sysdate, MODIFIED_BY=v_spliter_a(6) 
+                UPDATE mavef.subsidary_mst_modify@UATR_BACKUP4 SET ACCOUNT_NAME=v_spliter_a(2), MODIFIED_DT=sysdate, MODIFIED_BY=v_spliter_a(6) 
                 WHERE ACCOUNT_NO=v_spliter_a(3) AND PARENT_ACC=v_spliter_a(4);
             ELSE
-                UPDATE mavef.subsidary_master SET ACCOUNT_NAME=v_spliter_a(2), ACCOUNT_NO=TO_NUMBER(v_spliter_a(7)) 
+                UPDATE mavef.subsidary_master@UATR_BACKUP4 SET ACCOUNT_NAME=v_spliter_a(2), ACCOUNT_NO=TO_NUMBER(v_spliter_a(7)) 
                 WHERE ACCOUNT_NO=v_spliter_a(3) AND PARENT_ACC=v_spliter_a(4);
             END IF;
         END IF;
@@ -240,7 +241,7 @@
         -- v_spliter_a(1) = PARENT_ACC
         OPEN p_as_outresult FOR
             select count(*) as cnt 
-            from mavef.subsidary_master 
+            from mavef.subsidary_master@UATR_BACKUP4 
             where parent_acc=v_spliter_a(1) and STATUS_ID=1;
 
     ELSIF p_flag = 'ADD_SUB_ACC_NAME' THEN
@@ -249,7 +250,7 @@
         -- v_spliter_a(2) = PARENT_ACC
         OPEN p_as_outresult FOR
             select ACCOUNT_NAME 
-            from mavef.subsidary_master 
+            from mavef.subsidary_master@UATR_BACKUP4 
             where ACCOUNT_NO=v_spliter_a(1) and PARENT_ACC=v_spliter_a(2) and STATUS_ID=1;
 
     ELSIF p_flag = 'ADD_SUB_ACC_EXIST' THEN
@@ -258,7 +259,7 @@
         -- v_spliter_a(2) = ACCOUNT_NAME
         OPEN p_as_outresult FOR
             select count(*) as cnt 
-            from mavef.subsidary_master 
+            from mavef.subsidary_master@UATR_BACKUP4 
             where parent_acc=v_spliter_a(1) and STATUS_ID=1 and account_name=v_spliter_a(2);
             
     ELSIF p_flag = 'GET_ACTIVE_BRANCHES' THEN
@@ -267,10 +268,8 @@
         
         OPEN p_as_outresult FOR
             SELECT BRANCH_ID, BRANCH_NAME
-            FROM mavef.branch_master 
+            FROM mavef.branch_master@UATR_BACKUP4 
             WHERE firm_id = TO_NUMBER(v_spliter_a(1)) 
             AND status_id = 1 
             ORDER BY branch_name;
-
-
 
