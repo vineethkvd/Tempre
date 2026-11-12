@@ -1,1 +1,486 @@
+        public async Task<dynamic> PostAccountsData(PostReqDto PostReq)
+        {
+            dynamic response;
+            using var connection = _context.CreateConnectionVef();
+            var flag = PostReq.p_flag;
+            string branchStatusQuery = "";
+            if (flag == "REJECT")
+            {
+                var remarks = PostReq.p_pagevalue;
+
+                string[] rejectData =
+                    PostReq.p_paravalue.Split('~');
+
+                var transId = rejectData[0];
+
+                var empCode = rejectData[1];
+                string preparedByQuery = @"
+                    select USER_ID
+                    from ACCTRANS_TEMP
+                    where TRANSID = :transId";
+
+                var preparedBy = await connection.ExecuteScalarAsync<int>(
+                    preparedByQuery,
+                    new { transId });
+
+                if (preparedBy.ToString() == empCode)
+                {
+                    return "You are not authorised to approve/reject this page";
+                }
+                branchStatusQuery = $@"
+                    Update acctrans_temp
+                    set STAT = 2,
+                        AUTHORISEDBY = '{empCode}',
+                        NARR = '{remarks}'
+                    where TRANSID = {transId}";
+                await connection.ExecuteAsync(branchStatusQuery);
+                return "Rejected Successfully";
+            }
+            else if (flag == "APPROVE")
+            {
+                string[] approveData =
+                    PostReq.p_paravalue.Split('~');
+
+                var transId = Convert.ToInt32(approveData[0]);
+
+                var empCode = approveData[1];
+                string preparedByQuery = @"
+                    select USER_ID
+                    from ACCTRANS_TEMP
+                    where TRANSID = :transId";
+
+                var preparedBy = await connection.ExecuteScalarAsync<int>(
+                    preparedByQuery,
+                    new { transId });
+
+                if (preparedBy.ToString() == empCode)
+                {
+                    return "You are not authorised to approve/reject this page";
+                }
+                string voucherQuery = @"
+                    select vouch_id
+                    from transid_detail
+                    where branch_id = 0
+                    and firm_id = 1";
+
+                int voucherNo =
+                    await connection.ExecuteScalarAsync<int>(
+                        voucherQuery);
+
+                await connection.ExecuteAsync(@"
+                    update transid_detail
+                    set vouch_id = vouch_id + 1
+                    where branch_id = 0
+                    and firm_id = 1");
+                var details = (
+                    await connection.QueryAsync(@"
+                        select *
+                        from acctrans_temp_details
+                        where transid = :transid",
+                        new
+                        {
+                            transid = transId
+                        })
+                ).ToList();
+
+                var count = details.Count();
+                int debitAccount = 0;
+                int creditAccount = 0;
+
+                foreach (var d in details)
+                {
+                    if (Convert.ToString(d.TYPE) == "D")
+                    {
+                        debitAccount = Convert.ToInt32(d.ACCOUNNO);
+                    }
+
+                    if (Convert.ToString(d.TYPE) == "C")
+                    {
+                        creditAccount = Convert.ToInt32(d.ACCOUNNO);
+                    }
+                }
+                foreach (var item in details)
+                {
+                    decimal amount =
+                        item.TYPE == "D"
+                        ? Convert.ToDecimal(item.DEBIT)
+                        : Convert.ToDecimal(item.CREDIT);
+
+                    string insertTransaction = @"
+                    INSERT INTO TRANSACTION_DETAIL
+                    (
+                        FIRM_ID,
+                        BRANCH_ID,
+                        MODULE_ID,
+                        TRANSNO,
+                        REF_ID,
+                        ACCOUNT_NO,
+                        TYPE,
+                        AMOUNT,
+                        TRA_DT,
+                        PAY_MODE,
+                        VALUE_DT,
+                        DESCR,
+                        USER_ID,
+                        TRANS_ID,
+                        CONTRA_NO,
+                        NARRATION,
+                        SEGMENT_ID
+                    )
+                    VALUES
+                    (
+                        1,
+                        0,
+                        1,
+                        0,
+                        :REF_ID,
+                        :ACCOUNT_NO,
+                        :TYPE,
+                        :AMOUNT,
+                        SYSDATE,
+                        'CS',
+                        SYSDATE,
+                        :DESCR,
+                        :USER_ID,
+                        :TRANS_ID,
+                        :CONTRA_NO,
+                        :NARRATION,
+                        1
+                    )";
+
+                    await connection.ExecuteAsync(
+                    insertTransaction,
+                    new
+                    {
+                        REF_ID = transId,
+                        ACCOUNT_NO = item.ACCOUNNO,
+                        TYPE = item.TYPE,
+                        AMOUNT = amount,
+                        DESCR = item.DESCRI,
+                        USER_ID = empCode,
+                        TRANS_ID = transId,
+
+                        CONTRA_NO =
+                            item.TYPE == "D"
+                            ? creditAccount
+                            : debitAccount,
+
+                        NARRATION = item.DESCRI
+                    });
+                }
+                foreach (var item in details)
+                {
+                    if (Convert.ToInt32(item.SUBACCNO) > 0)
+                    {
+                        decimal amount =
+                            Convert.ToString(item.TYPE) == "D"
+                            ? Convert.ToDecimal(item.DEBIT)
+                            : Convert.ToDecimal(item.CREDIT);
+
+                        string getTransferIdQuery =
+                            Convert.ToString(item.TYPE) == "C"
+                            ?
+                            @"select transfer_pay
+                          from transid_detail
+                          where branch_id = 0
+                          and firm_id = 1"
+                                        :
+                                        @"select transfer_receipt
+                          from transid_detail
+                          where branch_id = 0
+                          and firm_id = 1";
+
+                        int subId =
+                            await connection.ExecuteScalarAsync<int>(
+                                getTransferIdQuery);
+
+                        string updateTransferIdQuery =
+                            Convert.ToString(item.TYPE) == "C"
+                            ?
+                            @"update transid_detail
+                          set transfer_pay = transfer_pay + 1
+                          where branch_id = 0
+                          and firm_id = 1"
+                                        :
+                                        @"update transid_detail
+                          set transfer_receipt = transfer_receipt + 1
+                          where branch_id = 0
+                          and firm_id = 1";
+
+                        await connection.ExecuteAsync(
+                            updateTransferIdQuery);
+
+                        string insertSubsidiary = @"
+                        INSERT INTO SUBSIDARY_TRANSACTION
+                        (
+                            FIRM_ID,
+                            BRANCH_ID,
+                            PARENT_ACC,
+                            ACCOUNT_NO,
+                            TRANS_NO,
+                            AMOUNT,
+                            TYPE,
+                            TRA_DT,
+                            PAY_MODE,
+                            DESCR,
+                            TRANS_ID,
+                            SUB_ID
+                        )
+                        VALUES
+                        (
+                            1,
+                            0,
+                            :PARENT_ACC,
+                            :ACCOUNT_NO,
+                            0,
+                            :AMOUNT,
+                            :TYPE,
+                            SYSDATE,
+                            'TR',
+                            :DESCR,
+                            :TRANS_ID,
+                            :SUB_ID
+                        )";
+
+                        await connection.ExecuteAsync(
+                            insertSubsidiary,
+                            new
+                            {
+                                PARENT_ACC = item.ACCOUNNO,
+                                ACCOUNT_NO = item.SUBACCNO,
+                                AMOUNT = amount,
+                                TYPE = item.TYPE,
+                                DESCR = item.DESCRI,
+                                TRANS_ID = transId,
+                                SUB_ID = subId
+                            });
+                    }
+                }
+                foreach (var item in details)
+                {
+                    if (Convert.ToInt32(item.ACCSTATUS) == 1)
+                    {
+                        decimal amount =
+                            Convert.ToString(item.TYPE) == "D"
+                            ? Convert.ToDecimal(item.DEBIT)
+                            : Convert.ToDecimal(item.CREDIT);
+
+                        string getCashIdQuery =
+                            Convert.ToString(item.TYPE) == "C"
+                            ?
+                            @"select cash_pay
+                          from transid_detail
+                          where branch_id = 0
+                          and firm_id = 1"
+                                        :
+                                        @"select cash_receipt
+                          from transid_detail
+                          where branch_id = 0
+                          and firm_id = 1";
+
+                        int cashId =
+                            await connection.ExecuteScalarAsync<int>(
+                                getCashIdQuery);
+
+                        string updateCashIdQuery =
+                            Convert.ToString(item.TYPE) == "C"
+                            ?
+                            @"update transid_detail
+                          set cash_pay = cash_pay + 1
+                          where branch_id = 0
+                          and firm_id = 1"
+                                        :
+                                        @"update transid_detail
+                          set cash_receipt = cash_receipt + 1
+                          where branch_id = 0
+                          and firm_id = 1";
+
+                        await connection.ExecuteAsync(updateCashIdQuery);
+
+                        string insertCash = @"
+                        INSERT INTO CASH_TRANSACTION
+                        (
+                            FIRM_ID,
+                            BRANCH_ID,
+                            CUST_NAME,
+                            DESCR,
+                            TRANS_NO,
+                            AMOUNT,
+                            TYPE,
+                            TRA_DT,
+                            ACCOUNT_NO,
+                            CASH_ID,
+                            TRANS_ID,
+                            COUNTER
+                        )
+                        VALUES
+                        (
+                            1,
+                            0,
+                            :CUST_NAME,
+                            :DESCR,
+                            0,
+                            :AMOUNT,
+                            :TYPE,
+                            SYSDATE,
+                            :ACCOUNT_NO,
+                            :CASH_ID,
+                            :TRANS_ID,
+                            0
+                        )";
+
+                        await connection.ExecuteAsync(
+                            insertCash,
+                            new
+                            {
+                                CUST_NAME = item.CUSTNAME,
+                                DESCR = item.DESCRI,
+                                AMOUNT = amount,
+                                TYPE = item.TYPE,
+                                ACCOUNT_NO = item.ACCOUNNO,
+                                CASH_ID = cashId,
+                                TRANS_ID = transId
+                            });
+                    }
+                }
+                foreach (var item in details)
+                {
+                    if (Convert.ToInt32(item.ACCSTATUS) == 2)
+                    {
+                        decimal amount =
+                            Convert.ToString(item.TYPE) == "D"
+                            ? Convert.ToDecimal(item.DEBIT)
+                            : Convert.ToDecimal(item.CREDIT);
+
+                        string insertCheque = @"
+                            INSERT INTO CHEQUE_REGISTER
+                            (
+                                FIRM_ID,
+                                BRANCH_ID,
+                                CHEQUE_NO,
+                                CHEQUE_DATE,
+                                STATUS_ID,
+                                TYPE,
+                                BANK_NAME,
+                                BANK_CODE,
+                                TRA_DT,
+                                TRANS_ID,
+                                CHEQUE_AMOUNT,
+                                DESCR,
+                                TRANS_NO
+                            )
+                            VALUES
+                            (
+                                1,
+                                0,
+                                :CHEQUE_NO,
+                                :CHEQUE_DATE,
+                                0,
+                                :TYPE,
+                                :BANK_NAME,
+                                :BANK_CODE,
+                                SYSDATE,
+                                :TRANS_ID,
+                                :CHEQUE_AMOUNT,
+                                :DESCR,
+                                0
+                            )";
+
+                        await connection.ExecuteAsync(
+                            insertCheque,
+                            new
+                            {
+                                CHEQUE_NO = item.CHECKNO,
+                                CHEQUE_DATE = item.CHECKDATE,
+                                TYPE = item.TYPE,
+                                BANK_NAME = item.CUSTOMERBANK,
+                                BANK_CODE = item.SUBACCNO,
+                                TRANS_ID = transId,
+                                CHEQUE_AMOUNT = amount,
+                                DESCR = item.DESCRI
+                            });
+                    }
+                }
+                branchStatusQuery = $@"
+                    Update acctrans_temp
+                    set
+                        STAT = 1,
+                        VOUCHNO = {voucherNo},
+                        AUTHORISEDBY = '{empCode}'
+                    where TRANSID = {transId}";
+
+                await connection.ExecuteAsync(branchStatusQuery);
+
+                return "Approved Successfully";
+            }
+            else if (flag == "REQUEST")
+            {
+                branchStatusQuery = @"select t.int_waiver_apprd  from branch_master t where t.branch_id =1";
+                var userData = (PostReq.p_paravalue).Split("~");
+                string ValidUser = "Select count(*) from HRM_EMPLOYEE_MASTER a where a.EMP_CODE =" + userData[2] + " and a.status_id=1";
+                int UserStatus = await connection.ExecuteScalarAsync<int>(ValidUser);
+                if (UserStatus == 0)
+                {
+                    return "Invalid User";
+                }
+                int branchStatus = await connection.ExecuteScalarAsync<int>(branchStatusQuery);
+                string query = "", query1 = "", UpdateTransID = "";
+                if (branchStatus == 0)
+                {
+                    query = @"select value from key_master  where firm_id=1 and branch_id=0 and module_id=0 and key_id=2";
+                    int transaction = await connection.ExecuteScalarAsync<int>(query);
+                    UpdateTransID = @"Update key_master   set value = value + 1
+                where firm_id = 1   and branch_id = 0   and module_id = 0   and key_id = 2";
+                    await connection.ExecuteScalarAsync(UpdateTransID);
+                    var _NeftAmount = 0.0;
+                    if (transaction > 0)
+                    {
+                        var acc_data = (PostReq.p_pagevalue).Split("^");
+                        query = @"insert into ACCTRANS_TEMP(BRANCH_ID, FIRM_ID, USER_ID, NARR, STAT, TRANSID, NEFTDATA, TRA_DT, SEGMENT_ID)
+                                values(" + userData[1] + "," + userData[0] + "," + userData[2] + ",UPPER('" + userData[4] + "'),  0," + transaction + ",0,sysdate," + userData[6] + ")";//ExecuteNonQueryAsync
+                        await connection.ExecuteScalarAsync(query);
+
+                        foreach (var item in acc_data)
+                        {   //   0  1      2                  3     4  5    6      7  8   9   10               
+                            //46503~6~Accrued Expenses      ~test~1.00~0~   0   ~   ~   ~   1-Oct-2026~^
+                            //35704~6~Accrued Finance Charges ~1    ~0~1.00~0~~~1-Oct-2026~
+                            //36110~sdfsdf~1.00~0~6
+                            // pending logic
+                            var arrayData = item.Split("~");
+                            if (arrayData[1] == "7")
+                            {
+                                if (arrayData[4] != "0")
+                                {
+                                    _NeftAmount = item[4];
+                                }
+                                else if (arrayData[5] != "0")
+                                {
+                                    _NeftAmount = item[5];
+                                }
+                                int CORPORATE_ID;
+                                CORPORATE_ID = transaction + 1;
+                                query = @"insert into neft_master(branch_id,firm_id,module_id,doc_Id,SEND_TRANSID,amount,typestatus,status_id,CORPORATE_ID)
+            values(" + userData[1] + "," + userData[0] + "," + userData[2] + ",'" + transaction + "','','" + _NeftAmount + "','NE',0,'" + CORPORATE_ID + "')";
+                                await connection.ExecuteScalarAsync(query);
+                            }
+                            query1 = @"insert into ACCTRANS_TEMP_DETAILS (TRANSID, ACCOUNNO, ACCOUNNAME, DESCRI, CREDIT, DEBIT, SUBACCNO, CheckDATE, CUSTNAME, ACCSTATUS, TYPE, CHECKNO, CUSTOMERBANK)
+                                values(" + transaction + "," + arrayData[0] + ",'" + arrayData[2] + "','" + arrayData[3] + "'," + arrayData[5] + "," + arrayData[4] + "," + arrayData[6] + ",sysdate,'" + arrayData[8] + "'," + arrayData[1] + ",'" + arrayData[11] + "','" + arrayData[8] + "','" + arrayData[10] + "')";
+                            await connection.ExecuteScalarAsync(query1);
+                        }
+
+
+                        response = "SUCCESS " + transaction;
+                        return response;
+                    }
+                    else
+                    {
+                        response = "ID NOT GENERATED";
+                        return response;
+                    }
+                }
+                else
+                {
+                    return "Branch Is Closed";
+                }
+            }
 
