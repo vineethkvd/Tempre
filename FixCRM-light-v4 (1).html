@@ -1,1 +1,309 @@
+  public async Task<dynamic> PostVefDatas(PostVefDatsDto PostReq)
+  {
+      dynamic response;
+      using var connection = _context.CreateConnectionVef();
+      var flag = PostReq.p_flag;
+      string branchStatusQuery = "";
 
+      if (flag == "ADD_ACC_GET_NATURE")
+      {
+          branchStatusQuery = @"
+              select a.nature_no, a.accnature_name || ' | ' || chr(32) ||a.nature_no as accnature_name 
+              from account_nature a";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_GET_SCHEDULE")
+      {
+          branchStatusQuery = $@"
+              select a.schedule_no, a.schedule_name || ' | ' || chr(32) ||a.schedule_no as schedule_name 
+              from account_schedule a 
+              where a.nature_no = TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}) 
+              order by a.schedule_no";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_GET_SUBSCHEDULE")
+      {
+          branchStatusQuery = $@"
+              select a.subschedule_no, a.subschedule_name || ' | ' || chr(32) ||a.subschedule_no as subschedule_name 
+              from account_subschedule a 
+              where a.schedule_no = TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}) 
+              order by a.subschedule_no";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_GET_SUBTYPE")
+      {
+          branchStatusQuery = @"
+              select t.status_id, t.description as SubType 
+              from status_master t 
+              where t.module_id=1 and t.option_id=18";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_CHECK_PROFILE")
+      {
+          branchStatusQuery = $@"
+              select count(*) as cnt 
+              from account_profile 
+              where nature_no = TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}) 
+              and SCHEDULE_NO = TO_NUMBER({PostReq.p_paravalue.Split('~')[1]}) 
+              and SUBSCHEDULE_NO = TO_NUMBER({PostReq.p_paravalue.Split('~')[2]})";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_CHECK_ACCNO")
+      {
+          branchStatusQuery = $@"
+              select count(*) as cnt 
+              from account_profile 
+              where account_no = TO_NUMBER({PostReq.p_paravalue.Split('~')[0]})";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_CHECK_NAME")
+      {
+          branchStatusQuery = $@"
+              select count(*) as cnt 
+              from account_profile 
+              where account_name = '{PostReq.p_paravalue.Split('~')[0]}'";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_ACC_INSERT_NEW")
+      {
+          branchStatusQuery = $@"
+          BEGIN
+              insert into account_profile(account_no, account_name, ho_status, subschedule_no, schedule_no, nature_no) 
+              values(TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}), '{PostReq.p_paravalue.Split('~')[1]}', 0, TO_NUMBER({PostReq.p_paravalue.Split('~')[2]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[3]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[4]}));
+              
+              insert into account_status 
+              select {PostReq.p_paravalue.Split('~')[5]}, b.branch_id, TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[6]}) 
+              from branch_master b;
+              
+              insert into account_profile_dtl (account_no, created_by, created_dt) 
+              values(TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}), '{PostReq.p_paravalue.Split('~')[7]}', sysdate);
+              
+              COMMIT;
+          END;";
+
+          await connection.ExecuteAsync(branchStatusQuery);
+          return new[] { new { STATUS = 1, RES = "Success" } };
+      }
+      else if (flag == "ADD_SUB_ACC_GET_LIST")
+      {
+          if (PostReq.p_paravalue.Split('~')[0] == "1")
+          {
+              if (PostReq.p_paravalue.Split('~')[1] == "1")
+              {
+                  branchStatusQuery = $@"
+                      select distinct a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  
+                      from account_profile a, account_status b  
+                      where b.firm_id = {PostReq.p_paravalue.Split('~')[2]} and a.account_no=b.account_no and b.status_id in (2,3) 
+                      order by a.account_name";
+              }
+              else
+              {
+                  branchStatusQuery = $@"
+                      select a.account_name || ' | ' || chr(32) ||a.account_no as name ,b.status_id , a.account_name, a.account_no  
+                      from account_profile a, account_status b  
+                      where b.firm_id = {PostReq.p_paravalue.Split('~')[2]} and b.branch_id = {PostReq.p_paravalue.Split('~')[3]} and a.account_no=b.account_no and b.status_id in (2,3) 
+                      order by a.account_name";
+              }
+          }
+          else
+          {
+              if (PostReq.p_paravalue.Split('~')[1] == "1")
+              {
+                  branchStatusQuery = $@"
+                      select distinct a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  
+                      from account_profile a, account_status b  
+                      where b.firm_id = {PostReq.p_paravalue.Split('~')[2]} and a.account_no=b.account_no and b.status_id in (2,3) 
+                      order by a.account_no";
+              }
+              else
+              {
+                  branchStatusQuery = $@"
+                      select a.account_no || ' | ' || chr(32) ||a.account_name as name ,b.status_id , a.account_name, a.account_no  
+                      from account_profile a, account_status b  
+                      where b.firm_id = {PostReq.p_paravalue.Split('~')[2]} and b.branch_id = {PostReq.p_paravalue.Split('~')[3]} and a.account_no=b.account_no and b.status_id in (2,3) 
+                      order by a.account_no";
+              }
+          }
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_SUB_ACC_GET_SUBS")
+      {
+          if (PostReq.p_paravalue.Split('~')[0] == "Branch")
+          {
+              if (PostReq.p_paravalue.Split('~')[1] == "1")
+              {
+                  branchStatusQuery = $@"
+                      SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
+                      from subsidary_master 
+                      where parent_acc=TO_NUMBER({PostReq.p_paravalue.Split('~')[2]}) and firm_id=TO_NUMBER({PostReq.p_paravalue.Split('~')[3]}) and status_id=1 
+                      group by account_no, account_name,firm_id order by account_name";
+              }
+              else
+              {
+                  branchStatusQuery = $@"
+                      SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
+                      from subsidary_master 
+                      where parent_acc=TO_NUMBER({PostReq.p_paravalue.Split('~')[2]}) and branch_id=TO_NUMBER({PostReq.p_paravalue.Split('~')[4]}) and firm_id=TO_NUMBER({PostReq.p_paravalue.Split('~')[3]}) and status_id=1 
+                      order by account_name";
+              }
+          }
+          else if (PostReq.p_paravalue.Split('~')[0] == "All")
+          {
+              branchStatusQuery = $@"
+                  SELECT account_no, account_name ||  ' | ' ||  chr(32) ||account_no as SubAccountName 
+                  from subsidary_master 
+                  where parent_acc=TO_NUMBER({PostReq.p_paravalue.Split('~')[2]}) and firm_id=TO_NUMBER({PostReq.p_paravalue.Split('~')[3]}) and status_id=1 
+                  group by account_no, account_name,firm_id order by account_name";
+          }
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_SUB_ACC_INSERT")
+      {
+          if (PostReq.p_paravalue.Split('~')[0] == "Branch")
+          {
+              branchStatusQuery = $@"
+              DECLARE
+                  v_cnt NUMBER;
+              BEGIN
+                  SELECT CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN TO_NUMBER({PostReq.p_paravalue.Split('~')[1]})+1 ELSE MAX(ACCOUNT_NO)+1 END 
+                  INTO v_cnt 
+                  FROM subsidary_master 
+                  WHERE PARENT_ACC = '{PostReq.p_paravalue.Split('~')[1]}';
+                  
+                  insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+                  values(TO_NUMBER({PostReq.p_paravalue.Split('~')[2]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[3]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[1]}), v_cnt, '{PostReq.p_paravalue.Split('~')[4]}', 0, 'C', 1, 0);
+                  
+                  COMMIT;
+              END;";
+          }
+          else if (PostReq.p_paravalue.Split('~')[0] == "All")
+          {
+              if (PostReq.p_paravalue.Split('~')[6] == "0")
+              {
+                  branchStatusQuery = $@"
+                  DECLARE
+                      v_cnt NUMBER;
+                  BEGIN
+                      SELECT CASE WHEN MAX(ACCOUNT_NO) IS NULL THEN TO_NUMBER({PostReq.p_paravalue.Split('~')[1]})+1 ELSE MAX(ACCOUNT_NO)+1 END 
+                      INTO v_cnt 
+                      FROM subsidary_master 
+                      WHERE PARENT_ACC = '{PostReq.p_paravalue.Split('~')[1]}';
+                      
+                      insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+                      SELECT a.FIRM_ID, a.BRANCH_ID, TO_NUMBER({PostReq.p_paravalue.Split('~')[1]}), v_cnt, '{PostReq.p_paravalue.Split('~')[4]}', 0, 'C', 1, 0 
+                      from active_firms a inner join branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER({PostReq.p_paravalue.Split('~')[2]});
+                      
+                      insert into subsidary_mst_modify(PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,MODIFIED_BY,MODIFIED_DT) 
+                      values('{PostReq.p_paravalue.Split('~')[1]}', v_cnt, '{PostReq.p_paravalue.Split('~')[4]}', '{PostReq.p_paravalue.Split('~')[5]}', sysdate);
+                      
+                      COMMIT;
+                  END;";
+              }
+              else
+              {
+                  branchStatusQuery = $@"
+                  BEGIN
+                      insert into subsidary_master(FIRM_ID,BRANCH_ID,PARENT_ACC,ACCOUNT_NO,ACCOUNT_NAME,BALANCE,TYPE,STATUS_ID,SUB_ID) 
+                      SELECT a.FIRM_ID, a.BRANCH_ID, TO_NUMBER({PostReq.p_paravalue.Split('~')[1]}), TO_NUMBER({PostReq.p_paravalue.Split('~')[6]}), '{PostReq.p_paravalue.Split('~')[4]}', 0, 'C', 1, 0 
+                      from active_firms a inner join branch_master b on a.BRANCH_ID = b.BRANCH_ID where a.FIRM_ID = TO_NUMBER({PostReq.p_paravalue.Split('~')[2]});
+                      
+                      COMMIT;
+                  END;";
+              }
+          }
+
+          await connection.ExecuteAsync(branchStatusQuery);
+          return new[] { new { STATUS = 1, RES = "Success" } };
+      }
+      else if (flag == "ADD_SUB_ACC_UPDATE")
+      {
+          if (PostReq.p_paravalue.Split('~')[0] == "Branch")
+          {
+              branchStatusQuery = $@"
+              BEGIN
+                  update subsidary_master set ACCOUNT_NAME='{PostReq.p_paravalue.Split('~')[1]}' 
+                  where ACCOUNT_NO='{PostReq.p_paravalue.Split('~')[2]}' and PARENT_ACC='{PostReq.p_paravalue.Split('~')[3]}' and BRANCH_ID='{PostReq.p_paravalue.Split('~')[4]}';
+                  
+                  COMMIT;
+              END;";
+          }
+          else if (PostReq.p_paravalue.Split('~')[0] == "All")
+          {
+              if (PostReq.p_paravalue.Split('~')[6] == "0")
+              {
+                  branchStatusQuery = $@"
+                  BEGIN
+                      INSERT INTO subsidary_mst_modify_his (parent_acc, account_no, account_name, modified_by, modified_dt) 
+                      SELECT t.parent_acc, t.account_no, t.account_name, t.modified_by, t.modified_dt 
+                      FROM subsidary_mst_modify t 
+                      WHERE t.parent_acc='{PostReq.p_paravalue.Split('~')[3]}' AND t.account_no='{PostReq.p_paravalue.Split('~')[2]}';
+                      
+                      UPDATE subsidary_master SET ACCOUNT_NAME='{PostReq.p_paravalue.Split('~')[1]}' 
+                      WHERE ACCOUNT_NO='{PostReq.p_paravalue.Split('~')[2]}' AND PARENT_ACC='{PostReq.p_paravalue.Split('~')[3]}';
+                      
+                      UPDATE subsidary_mst_modify SET ACCOUNT_NAME='{PostReq.p_paravalue.Split('~')[1]}', MODIFIED_DT=sysdate, MODIFIED_BY='{PostReq.p_paravalue.Split('~')[5]}' 
+                      WHERE ACCOUNT_NO='{PostReq.p_paravalue.Split('~')[2]}' AND PARENT_ACC='{PostReq.p_paravalue.Split('~')[3]}';
+                      
+                      COMMIT;
+                  END;";
+              }
+              else
+              {
+                  branchStatusQuery = $@"
+                  BEGIN
+                      INSERT INTO subsidary_mst_modify_his (parent_acc, account_no, account_name, modified_by, modified_dt) 
+                      SELECT t.parent_acc, t.account_no, t.account_name, t.modified_by, t.modified_dt 
+                      FROM subsidary_mst_modify t 
+                      WHERE t.parent_acc='{PostReq.p_paravalue.Split('~')[3]}' AND t.account_no='{PostReq.p_paravalue.Split('~')[2]}';
+                      
+                      UPDATE subsidary_master SET ACCOUNT_NAME='{PostReq.p_paravalue.Split('~')[1]}', ACCOUNT_NO=TO_NUMBER({PostReq.p_paravalue.Split('~')[6]}) 
+                      WHERE ACCOUNT_NO='{PostReq.p_paravalue.Split('~')[2]}' AND PARENT_ACC='{PostReq.p_paravalue.Split('~')[3]}';
+                      
+                      COMMIT;
+                  END;";
+              }
+          }
+
+          await connection.ExecuteAsync(branchStatusQuery);
+          return new[] { new { STATUS = 1, RES = "Success" } };
+      }
+      else if (flag == "ADD_SUB_ACC_CHECK")
+      {
+          branchStatusQuery = $@"
+              select count(*) as cnt 
+              from subsidary_master 
+              where parent_acc='{PostReq.p_paravalue.Split('~')[0]}' and STATUS_ID=1";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_SUB_ACC_NAME")
+      {
+          branchStatusQuery = $@"
+              select ACCOUNT_NAME 
+              from subsidary_master 
+              where ACCOUNT_NO='{PostReq.p_paravalue.Split('~')[0]}' and PARENT_ACC='{PostReq.p_paravalue.Split('~')[1]}' and STATUS_ID=1";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "ADD_SUB_ACC_EXIST")
+      {
+          branchStatusQuery = $@"
+              select count(*) as cnt 
+              from subsidary_master 
+              where parent_acc='{PostReq.p_paravalue.Split('~')[0]}' and STATUS_ID=1 and account_name='{PostReq.p_paravalue.Split('~')[1]}'";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+      else if (flag == "GET_ACTIVE_BRANCHES")
+      {
+          branchStatusQuery = $@"
+              SELECT BRANCH_ID, BRANCH_NAME
+              FROM branch_master 
+              WHERE firm_id = TO_NUMBER({PostReq.p_paravalue.Split('~')[0]}) 
+              AND status_id = 1 
+              ORDER BY branch_name";
+          return await connection.QueryAsync(branchStatusQuery);
+      }
+
+      return null;
+
+
+  }
+   
