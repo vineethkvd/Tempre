@@ -4,12 +4,12 @@
     {
         branchStatusQuery = $@"
             SELECT branch_id, BRANCH_NAME 
-            FROM mavef.branch_master@UATR_BACKUP4 
+            FROM branch_master 
             WHERE firm_id = TO_NUMBER({PostReq.p_pagevalue.Split('~')[0]}) 
             and status_id = 1 
             and NOT EXISTS (
-                SELECT * FROM mavef.branch_mst_nucleus@UATR_BACKUP4 
-                WHERE mavef.branch_master.branch_id = mavef.branch_mst_nucleus.branch_id
+                SELECT * FROM branch_mst_nucleus 
+                WHERE branch_master.branch_id = branch_mst_nucleus.branch_id
             )";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -17,7 +17,7 @@
     {
         branchStatusQuery = $@"
             Select count(branchid) as cnt 
-            from mavef.branch_mst_nucleus@UATR_BACKUP4 
+            from branch_mst_nucleus 
             where branchid = '{PostReq.p_pagevalue.Split('~')[0]}'";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -25,7 +25,7 @@
     {
         branchStatusQuery = $@"
             Select count(branch_name) as cnt 
-            from mavef.branch_mst_nucleus@UATR_BACKUP4 
+            from branch_mst_nucleus 
             where branch_name = '{PostReq.p_pagevalue.Split('~')[0]}'";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -33,7 +33,7 @@
     {
         branchStatusQuery = $@"
             Select count(branch_code) as cnt 
-            from mavef.branch_mst_nucleus@UATR_BACKUP4 
+            from branch_mst_nucleus 
             where branch_code = '{PostReq.p_pagevalue.Split('~')[0]}'";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -42,10 +42,10 @@
         // p_pagevalue Format: BRANCHID(0) ~ BRANCHCODE(1) ~ BRANCHNAME(2) ~ BRANCH_ID(3) ~ local_branch_id(4)
         branchStatusQuery = $@"
         BEGIN
-            insert into mavef.branch_mst_nucleus@UATR_BACKUP4 (branchid, branch_code, branch_name, branch_id)
+            insert into branch_mst_nucleus (branchid, branch_code, branch_name, branch_id)
             values('{PostReq.p_pagevalue.Split('~')[0]}', '{PostReq.p_pagevalue.Split('~')[1]}', '{PostReq.p_pagevalue.Split('~')[2]}', TO_NUMBER({PostReq.p_pagevalue.Split('~')[3]}));
             
-            update mavef.branch_master@UATR_BACKUP4 
+            update branch_master 
             set branch_no = '{PostReq.p_pagevalue.Split('~')[0]}' 
             where branch_id = TO_NUMBER({PostReq.p_pagevalue.Split('~')[3]});
             
@@ -62,7 +62,7 @@
     {
         branchStatusQuery = @"
             Select status_id as Group_Id, DESCRIPTION as Group_Name 
-            from mavef.status_master@UATR_BACKUP4 
+            from status_master 
             where module_id=98";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -70,7 +70,7 @@
     {
         branchStatusQuery = @"
             Select status_id as Id, DESCRIPTION as Name 
-            from mavef.status_master@UATR_BACKUP4 
+            from status_master 
             where module_id=97";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -78,7 +78,7 @@
     {
         branchStatusQuery = @"
             select distinct(s.account_no) as SUB_ACC, s.account_name as Name 
-            from mavef.subsidary_master@UATR_BACKUP4 s, mavef.account_profile@UATR_BACKUP4 a 
+            from subsidary_master s, account_profile a 
             where a.account_no=s.parent_acc 
             order by account_no";
         return await connection.QueryAsync(branchStatusQuery);
@@ -87,7 +87,7 @@
     {
         branchStatusQuery = $@"
             select Segment_ID, Segment_NAME 
-            from mavef.segment_master@UATR_BACKUP4 
+            from segment_master 
             where firm_id = TO_NUMBER({PostReq.p_pagevalue.Split('~')[0]})";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -95,7 +95,7 @@
     {
         branchStatusQuery = $@"
             select account_no as ACCOUNT_NO, account_name as ACCOUNT_NAME 
-            from mavef.account_profile@UATR_BACKUP4 
+            from account_profile 
             where account_no like '{PostReq.p_pagevalue.Split('~')[0]}'";
         return await connection.QueryAsync(branchStatusQuery);
     }
@@ -107,15 +107,15 @@
             v_cnt NUMBER;
         BEGIN
             SELECT count(GROUPGLID) INTO v_cnt 
-            FROM mavef.account_profile_nucleus@UATR_BACKUP4 
+            FROM account_profile_nucleus 
             WHERE GROUPGLID = '{PostReq.p_pagevalue.Split('~')[0]}';
             
             IF v_cnt = 0 THEN
                 SELECT max(l4)+0001 INTO v_cnt 
-                FROM mavef.account_profile_nucleus@UATR_BACKUP4 
+                FROM account_profile_nucleus 
                 WHERE l1 = '{PostReq.p_pagevalue.Split('~')[1]}';
                 
-                insert into mavef.account_profile_nucleus@UATR_BACKUP4 (
+                insert into account_profile_nucleus (
                     account_name, groupglid, parentgroup, parentid, voucher_posting, account_type, 
                     l1, l2, l3, l4, account_no, sub_accno, segment_id
                 ) values (
@@ -129,16 +129,14 @@
         
         await connection.ExecuteAsync(branchStatusQuery);
 
-        // We check existence manually here to return the correct dynamic response structure based on the legacy logic
         var checkExistsQuery = $@"
             SELECT count(GROUPGLID) as cnt 
-            FROM mavef.account_profile_nucleus@UATR_BACKUP4 
+            FROM account_profile_nucleus 
             WHERE GROUPGLID = '{PostReq.p_pagevalue.Split('~')[0]}'";
         
         int existCount = await connection.ExecuteScalarAsync<int>(checkExistsQuery);
         
         if (existCount > 0) {
-            // Note: The previous logic relied on dual output. If it already existed before execution, return error.
             return new[] { new { STATUS = 0, RES = "Already Exists" } };
         } else {
             return new[] { new { STATUS = 1, RES = "Success" } };
