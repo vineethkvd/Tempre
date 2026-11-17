@@ -1,1 +1,41 @@
 
+Based on the ICICI Bank "Testing Check-list" from the image provided, here is the exact test case data (p_flag and p_pagevalue) you need to pass into your API to successfully execute and record each mandatory sign-off scenario for IMPS.
+I have mapped these directly to your verified corporate details (SESPRODUCT, TECH1, etc.).
+1. SUCCESS - 1: Proper Transaction Success Response
+Objective: Trigger a standard, successful IMPS transfer.
+ * API Flag: IMPS_PAYMENT
+ * Payload (p_pagevalue):
+20261117000001~100.00~000405002777~0004510002776~TestUser~SBIN0003060~TestSuccess~SESPRODUCT~TECH1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~IFS~N
+
+2. SUCCESS - 2: Proper Transaction Failure Response
+Objective: Trigger a business-logic failure (e.g., amount exceeds IMPS 5 Lakh limit or invalid beneficiary account) to get a natural failure response from the bank.
+ * API Flag: IMPS_PAYMENT
+ * Payload (p_pagevalue): (Note the amount is 6,00,000.00 which exceeds IMPS limits)
+20261117000002~600000.00~000405002777~0004510002776~TestUser~SBIN0003060~TestFail~SESPRODUCT~TECH1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~IFS~N
+
+3. SUCCESS - 3: Proper Transaction Status Check (Successful Case)
+Objective: Check the status of the successful transaction from Test 1.
+ * API Flag: IMPS_STATUS_CHECK
+ * Payload (p_pagevalue): (Uses the UNIQUEID from Test 1)
+20261117000001~SESPRODUCT~TECH1~TXBCOMP0533~MANAPPURAMGL
+
+4. SUCCESS - 4: Proper Transaction Status Check (Failure Case)
+Objective: Check the status of the failed transaction from Test 2.
+ * API Flag: IMPS_STATUS_CHECK
+ * Payload (p_pagevalue): (Uses the UNIQUEID from Test 2)
+20261117000002~SESPRODUCT~TECH1~TXBCOMP0533~MANAPPURAMGL
+
+API Gateway / Network Failure Scenarios
+For these tests, the payload data doesn't matter as much as how you send it, because the ICICI Gateway blocks it before it even reaches the core banking system.
+5. FAILURE - 1: Invalid IP Address (Expected 500/401)
+ * How to test: Run your application locally from your laptop/WiFi (an IP address that has not been whitelisted by ICICI) and send the payload from Test 1.
+6. FAILURE - 2: Invalid API KEY (Expected 401)
+ * How to test: Temporarily edit your appsettings.json and change ICICI_API_Key to a random string (e.g., invalid_key_123). Run Test 1.
+7. FAILURE - 3: Invalid Request Packet (Expected 997 Bad Request)
+ * Objective: Pass data that violates the JSON schema (e.g., sending text in a number field).
+ * API Flag: IMPS_PAYMENT
+ * Payload (p_pagevalue): (Note the amount is the text "ABC" instead of a number)
+20261117000007~ABC~000405002777~0004510002776~TestUser~SBIN0003060~TestSchemaFail~SESPRODUCT~TECH1~TXBCOMP0533~MANAPPURAMFIN~MANAPPURAMGL~IFS~N
+
+8. FAILURE - 4: Invalid Encryption / Decryption
+ * How to test: Temporarily change the .cer public key file in your folder to a dummy certificate, or simply change the oaepHashingAlgorithm in your C# code back to "SHA-256" instead of "NONE". The ICICI gateway will fail to decrypt it or reject the schema.
