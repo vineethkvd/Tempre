@@ -1,40 +1,27 @@
-
-  "IciciPayment": {
-    "token": {
-      "ICICI_API_Key": "drnAV25IQal72ivQEBUcIegZ9LsU4UHneqf7YZDcue8EGJAx",
-      "ICICI_API_Secret": "uXlGbPrAwKLrkaoHjlKgkMzjP0rfRR0VqjO7GNTYdo5SBA8tgdLKdLADibdeCLZ1",
-      "ICICI_GenerateToken_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/clientcredentialsv2/GenerateAccessToken",
-      "ICICI_Payment_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/v1/composite-payment",
-      "ICICI_Status_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/v1/composite-status",
-      "ICICI_CIB_Registration_URL": "https://uat-onprem-dmz-hybrid.icici.bank.in/api/Corporate/CIB/v1/Registration",
-      "ACTION_INTERVELL": "3"
-    }
-  },
 using Business.Contracts;
 using Business.Helpers;
 using DataAccess.Dto;
 using DataAccess.Dto.Request;
+using DataAccess.Dto.Response;
 using DataAccess.Repository;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Net;
-using System.Globalization;
-using System.IO;
 using System.Security.Cryptography.Xml;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using DataAccess.Dto.Response;
+using System.Text;
+using System.Threading.Tasks;
 using System.Xml;
-
 
 namespace Business.Services
 {
@@ -46,41 +33,61 @@ namespace Business.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _certRootPath;
 
-        private static string ICICI_Payment_URL;
-        private static string ICICI_Status_URL;
-        private static string ICICI_CIB_Registration_URL;
-        private static string ICICI_API_Key;
-        private static string ICICI_GenerateToken_URL;
-        private static string ICICI_API_Secret;
-        private static string ICICI_Status_URL_NEFT_RGS;
+        private readonly string _iciciPaymentUrl;
+        private readonly string _iciciStatusUrl;
+        private readonly string _iciciCibRegistrationUrl;
+        private readonly string _iciciApiKey;
+        private readonly string _iciciGenerateTokenUrl;
+        private readonly string _iciciApiSecret;
+        private readonly string _iciciStatusUrlNeftRgs;
+        private readonly int _actionInterval;
+        private readonly string _publicCertFile;
+        private readonly string _privateCertFile;
+        private readonly string _privateCertPassword;
 
         public IciciDcService(
             IciciDcRepo iciciDcRepo,
             IConfiguration configuration,
             CryptoHelper crypto,
-            IHttpClientFactory httpClientFactory, string certRootPath)
+            IHttpClientFactory httpClientFactory,
+            string certRootPath)
         {
             _iciciDcRepo = iciciDcRepo;
             _configuration = configuration;
             _crypto = crypto;
             _httpClientFactory = httpClientFactory;
-            ICICI_Payment_URL = _configuration["IciciPayment:token:ICICI_Payment_URL"];
-            ICICI_Status_URL = _configuration["IciciPayment:token:ICICI_Status_URL"];
-            ICICI_CIB_Registration_URL = _configuration["IciciPayment:token:ICICI_CIB_Registration_URL"];
-            ICICI_API_Key = _configuration["IciciPayment:token:ICICI_API_Key"];
-            ICICI_GenerateToken_URL = _configuration["IciciPayment:token:ICICI_GenerateToken_URL"];
-            ICICI_API_Secret = _configuration["IciciPayment:token:ICICI_API_Secret"];
-            ICICI_Status_URL_NEFT_RGS = _configuration["IciciPayment:token:ICICI_Status_URL_NEFT_RGS"];
             _certRootPath = certRootPath;
+
+            _iciciPaymentUrl = GetEnvValue("ICICI_PAYMENT_URL", required: true);
+            _iciciStatusUrl = GetEnvValue("ICICI_STATUS_URL", required: true);
+            _iciciCibRegistrationUrl = GetEnvValue("ICICI_CIB_REGISTRATION_URL", required: true);
+            _iciciApiKey = GetEnvValue("ICICI_API_KEY", required: true);
+            _iciciGenerateTokenUrl = GetEnvValue("ICICI_GENERATE_TOKEN_URL", required: true);
+            _iciciApiSecret = GetEnvValue("ICICI_API_SECRET", required: true);
+            _iciciStatusUrlNeftRgs = GetEnvValue("ICICI_STATUS_URL_NEFT_RGS", required: false);
+
+            string intervalRaw = GetEnvValue("ACTION_INTERVELL", required: false);
+            _actionInterval = int.TryParse(intervalRaw, out int parsedInterval) ? parsedInterval : 3;
+
+            _publicCertFile = GetEnvValue("ICICI_PUBLIC_CERT_FILE", required: true);
+            _privateCertFile = GetEnvValue("ICICI_PRIVATE_CERT_FILE", required: true);
+            _privateCertPassword = GetEnvValue("ICICI_PRIVATE_CERT_PASSWORD", required: true);
         }
+
+        private string GetEnvValue(string key, bool required)
+        {
+            string value = Environment.GetEnvironmentVariable(key) ?? _configuration[key];
+            if (required && string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Missing required ICICI environment variable: {key}");
+            }
+            return value ?? string.Empty;
+        }
+
+        public int GetActionIntervalMinutes() => _actionInterval;
 
         public async Task<dynamic> IciciDcPostEncryptService(PostEncReqDto postReqDto)
         {
-            //var PAGEVALUE = postReqDto.pagevalue;
-            //string jsonString1 = JsonConvert.SerializeObject(PAGEVALUE);
-            //var Encryp = await _crypto.Get_EncriptedText(jsonString1);
-            //return Encryp;
-
             var Tag = postReqDto.Tag;
             var CipherText = postReqDto.pagevalue;
             var Nonce = postReqDto.Nonce;
@@ -130,7 +137,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0010");
 
@@ -138,7 +145,7 @@ namespace Business.Services
                         WriteToFile("IMPS Status Check Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Status_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciStatusUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("IMPS Status Check Raw Response JSON: " + response);
 
@@ -163,7 +170,6 @@ namespace Business.Services
                                     WriteToFile("IMPS Status Check Final Decrypted Result: " + decData);
 
                                     JObject jodecResponse = JObject.Parse(decData);
-
                                     string status = jodecResponse.SelectToken("STATUS")?.ToString() ?? "";
                                     if (status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
                                     {
@@ -234,7 +240,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "WFIMPS");
 
@@ -242,7 +248,7 @@ namespace Business.Services
                         WriteToFile("IMPS Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Payment_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciPaymentUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("IMPS Raw Response JSON: " + response);
 
@@ -324,7 +330,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0010");
 
@@ -332,7 +338,7 @@ namespace Business.Services
                         WriteToFile("NEFT Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Payment_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciPaymentUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("NEFT Raw Response JSON: " + response);
 
@@ -426,7 +432,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0001");
 
@@ -434,7 +440,7 @@ namespace Business.Services
                         WriteToFile("RTGS Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Payment_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciPaymentUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("RTGS Raw Response JSON: " + response);
 
@@ -519,7 +525,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0010");
 
@@ -527,7 +533,7 @@ namespace Business.Services
                         WriteToFile("NEFT Status Check TPA Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Status_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciStatusUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("NEFT Status Check TPA Raw Response JSON: " + response);
 
@@ -581,6 +587,12 @@ namespace Business.Services
                 {
                     WriteToFile("<NEFT Status Check RGS Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
 
+                    if (string.IsNullOrWhiteSpace(_iciciStatusUrlNeftRgs))
+                    {
+                        WriteToFile("Missing ICICI_STATUS_URL_NEFT_RGS in .env");
+                        return new { status = "9", data = "Missing ICICI_STATUS_URL_NEFT_RGS configuration" };
+                    }
+
                     string authToken = requestDto.p_paravalue?.ToString() ?? "";
                     if (string.IsNullOrEmpty(authToken))
                     {
@@ -610,7 +622,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0010");
 
@@ -618,7 +630,7 @@ namespace Business.Services
                         WriteToFile("NEFT Status Check RGS Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Status_URL_NEFT_RGS, content);
+                        var httpResponse = await client.PostAsync(_iciciStatusUrlNeftRgs, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("NEFT Status Check RGS Raw Response JSON: " + response);
 
@@ -711,7 +723,7 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                         client.DefaultRequestHeaders.Add("x-priority", "0010");
 
@@ -719,7 +731,7 @@ namespace Business.Services
                         WriteToFile("RTGS Status Check Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_Status_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciStatusUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("RTGS Status Check Raw Response JSON: " + response);
 
@@ -808,14 +820,14 @@ namespace Business.Services
                     using (HttpClient client = new HttpClient())
                     {
                         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                        client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                        client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
                         string json = "{\"requestId\":\"" + corpId + "\",\"service\":\"" + service + "\",\"encryptedKey\":\"" + randomkey + "\",\"oaepHashingAlgorithm\":\"NONE\",\"iv\":\"\",\"encryptedData\":\"" + data + "\",\"clientInfo\":\"\",\"optionalParam\":\"\"}";
                         WriteToFile("CIB Registration Encrypted Request JSON: " + json);
 
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var httpResponse = await client.PostAsync(ICICI_CIB_Registration_URL, content);
+                        var httpResponse = await client.PostAsync(_iciciCibRegistrationUrl, content);
                         string response = await httpResponse.Content.ReadAsStringAsync();
                         WriteToFile("CIB Registration Raw Response JSON: " + response);
 
@@ -935,23 +947,23 @@ namespace Business.Services
         }
         #endregion
 
-        #region ICICI DC Token Generation 
+        #region ICICI DC Token Generation
 
-        private async Task<string> GenerateOAuthTokenAsync()
+        public async Task<string> GenerateOAuthTokenAsync()
         {
             try
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
                 using (HttpClient client = new HttpClient())
                 {
-                    string authString = ICICI_API_Key + ":" + ICICI_API_Secret;
+                    string authString = _iciciApiKey + ":" + _iciciApiSecret;
                     string base64Auth = Convert.ToBase64String(Encoding.UTF8.GetBytes(authString));
 
-                    client.DefaultRequestHeaders.Add("apikey", ICICI_API_Key);
+                    client.DefaultRequestHeaders.Add("apikey", _iciciApiKey);
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Auth);
 
                     var content = new StringContent("grant_type=client_credentials", Encoding.UTF8, "application/x-www-form-urlencoded");
-                    var httpResponse = await client.PostAsync(ICICI_GenerateToken_URL, content);
+                    var httpResponse = await client.PostAsync(_iciciGenerateTokenUrl, content);
                     string response = await httpResponse.Content.ReadAsStringAsync();
 
                     if (httpResponse.IsSuccessStatusCode)
@@ -1056,7 +1068,7 @@ namespace Business.Services
 
         private X509Certificate2 GetCertificate()
         {
-            string path = Path.Combine(_certRootPath, "Certificates", "Public_cer", "Composite-UAT.cer");
+            string path = Path.Combine(_certRootPath, "Certificates", "Public_cer", _publicCertFile);
 
             if (!File.Exists(path))
             {
@@ -1064,30 +1076,26 @@ namespace Business.Services
             }
 
             X509Certificate2 certificate = new X509Certificate2(path);
-            string publicKeyString = Convert.ToBase64String(certificate.GetPublicKey());
-            WriteToFile("<KEY IS>Composite-UAT Path" + path);
-            WriteToFile("Composite-UAT Key:" + publicKeyString);
+            WriteToFile("<KEY IS>Public cert Path: " + path);
             return certificate;
         }
 
         private X509Certificate2 GetPrivateCertificate()
         {
-            string path = Path.Combine(_certRootPath, "Certificates", "Private_cer", "manappuram.net_2026.pfx");
+            string path = Path.Combine(_certRootPath, "Certificates", "Private_cer", _privateCertFile);
 
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Private PFX certificate not found at: {path}");
             }
 
-            X509Certificate2 certificate = new X509Certificate2(path, "mana@123", X509KeyStorageFlags.PersistKeySet);
-            string privateKeyString = Convert.ToBase64String(certificate.GetPublicKey());
-            WriteToFile("<KEY IS>Private_cer Path" + path);
-            WriteToFile("Private_cer Key:" + privateKeyString);
+            X509Certificate2 certificate = new X509Certificate2(path, _privateCertPassword, X509KeyStorageFlags.PersistKeySet);
+            WriteToFile("<KEY IS>Private cert Path: " + path);
             if (certificate.HasPrivateKey)
             {
                 return certificate;
             }
-            WriteToFile("<KEY IS NUll>manappuram.net_2026.pfx");
+            WriteToFile($"<KEY IS NULL>{_privateCertFile}");
             return null;
         }
 
