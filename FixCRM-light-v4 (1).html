@@ -1,1 +1,691 @@
 
+# SBI CMP NextGen API Configuration (UAT)
+SBI_WRAPPER_URL=https://eissiwebuat.bank.sbi/gen6/gateway/thirdParty/wrapper/services
+SBI_SOURCE_ID=YOUR_SBI_SOURCE_ID
+SBI_DESTINATION=CMP
+SBI_TXN_TYPE=PAYMENT
+
+SBI_CORPORATE_CODE=YOUR_SBI_CORPORATE_CODE
+SBI_CORPORATE_PRODUCT_CODE=YOUR_SBI_PRODUCT_CODE
+
+SBI_EIS_PUBLIC_CERT_FILE=EIS-UAT-Public.cer
+SBI_CHANNEL_PRIVATE_CERT_FILE=sbi_channel_private.pfx
+SBI_CHANNEL_PRIVATE_CERT_PASSWORD=YOUR_SBI_PFX_PASSWORD
+
+# Switch to SHA256 if SBI EIS returns SI411 (RSA decryption Failed)
+SBI_RSA_OAEP_PADDING=SHA1
+
+
+
+Here is the rewritten ISbiDcService and SbiDcService structured identically to your IciciDcService—with all SBI_PAYMENT_POSTING and SBI_PAYMENT_ENQUIRY API calls, encryption, signing, HttpClient requests, decryption, and new { status, data } responses handled inline inside SbiDcPostEncryptService (no separate execution methods).
+1. ISbiDcService.cs
+using DataAccess.Dto.Request;
+using System.Threading.Tasks;
+
+namespace Business.Contracts
+{
+    public interface ISbiDcService
+    {
+        Task<dynamic> SbiDcPostEncryptService(PostEncReqDto postReqDto);
+        Task<dynamic> SbiDcPostService(PostReqDto postReqDto);
+    }
+}
+
+2. SbiDcService.cs
+This keeps .env configuration loading and follows SBI's Gen6 wrapper rules—25-character REQUEST_REFERENCE_NUMBER, 32-character keyboard-character AES key, AES-256-GCM with the first 12 bytes of the key as IV and a 16-byte tag, alphabetically sorted zero-space JSON signing for inner HASH, SHA256withRSA signing for outer DIGI_SIGN, RSA-OAEP AccessToken header, and response decryption using the same request AES key with EIS public-key signature verification.
+using Business.Contracts;
+using Business.Helpers;
+using DataAccess.Dto.Request;
+using DataAccess.Repository;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Business.Services
+{
+    public class SbiDcService : ISbiDcService
+    {
+        private readonly IciciDcRepo _repo; // Replace with SbiDcRepo if using a separate repo
+        private readonly IConfiguration _configuration;
+        private readonly CryptoHelper _crypto;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _certRootPath;
+
+        private readonly string _sbiWrapperUrl;
+        private readonly string _sbiSourceId;
+        private readonly string _sbiDestination;
+        private readonly string _sbiTxnType;
+        private readonly string _defaultCorporateCode;
+        private readonly string _defaultCorporateProductCode;
+        private readonly string _eisPublicCertFile;
+        private readonly string _channelPrivateCertFile;
+        private readonly string _channelPrivateCertPassword;
+        private readonly RSAEncryptionPadding _rsaOaepPadding;
+
+        private static long _rrnSequence = 0;
+        private const string KeyboardKeyChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        public SbiDcService(
+            IciciDcRepo repo,
+            IConfiguration configuration,
+            CryptoHelper crypto,
+            IHttpClientFactory httpClientFactory,
+            string certRootPath)
+        {
+            _repo = repo;
+            _configuration = configuration;
+            _crypto = crypto;
+            _httpClientFactory = httpClientFactory;
+            _certRootPath = certRootPath;
+
+            _sbiWrapperUrl = GetEnvValue("SBI_WRAPPER_URL", required: true);
+            _sbiSourceId = GetEnvValue("SBI_SOURCE_ID", required: true).Trim();
+            _sbiDestination = GetEnvValue("SBI_DESTINATION", required: false);
+            if (string.IsNullOrWhiteSpace(_sbiDestination)) _sbiDestination = "CMP";
+
+            _sbiTxnType = GetEnvValue("SBI_TXN_TYPE", required: false);
+            if (string.IsNullOrWhiteSpace(_sbiTxnType)) _sbiTxnType = "PAYMENT";
+
+            _defaultCorporateCode = GetEnvValue("SBI_CORPORATE_CODE", required: false);
+            _defaultCorporateProductCode = GetEnvValue("SBI_CORPORATE_PRODUCT_CODE", required: false);
+
+            _eisPublicCertFile = GetEnvValue("SBI_EIS_PUBLIC_CERT_FILE", required: true);
+            _channelPrivateCertFile = GetEnvValue("SBI_CHANNEL_PRIVATE_CERT_FILE", required: true);
+            _channelPrivateCertPassword = GetEnvValue("SBI_CHANNEL_PRIVATE_CERT_PASSWORD", required: true);
+
+            string oaepMode = GetEnvValue("SBI_RSA_OAEP_PADDING", required: false);
+            _rsaOaepPadding = oaepMode.Equals("SHA256", StringComparison.OrdinalIgnoreCase)
+                ? RSAEncryptionPadding.OaepSHA256
+                : RSAEncryptionPadding.OaepSHA1;
+        }
+
+        private string GetEnvValue(string key, bool required)
+        {
+            string value = Environment.GetEnvironmentVariable(key) ?? _configuration[key];
+            if (required && string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Missing required SBI environment variable: {key}");
+            }
+            return value ?? string.Empty;
+        }
+
+        public async Task<dynamic> SbiDcPostEncryptService(PostEncReqDto postReqDto)
+        {
+            var Tag = postReqDto.Tag;
+            var CipherText = postReqDto.pagevalue;
+            var Nonce = postReqDto.Nonce;
+            var Decrypted_Data = await _crypto.DecriptedText(CipherText, Nonce, Tag);
+
+            postReqDto.pagevalue = Decrypted_Data.Trim('\"');
+
+            PostReqDto requestDto = new PostReqDto();
+            requestDto.p_flag = postReqDto.flag;
+            requestDto.p_pagevalue = postReqDto.pagevalue;
+            requestDto.p_paravalue = postReqDto.paravalue;
+
+            if (requestDto.p_flag == "SBI_PAYMENT_POSTING")
+            {
+                dynamic rvalue = null;
+                // Format:
+                // uniqueRequestId(0)~corporateCode(1)~corporateProductCode(2)~corporateRefNo(3)~debitAccountNumber(4)~
+                // beneAccNo(5)~beneName(6)~bicCode(7)~paymentAmount(8)~paymentMethodName(9)~executionDate(10)~
+                // remarks(11)~paymentInstruction1(12)~beneCode(13)~beneAddress1(14)~chargeBournedBy(15)~remittanceCode(16)
+                string[] v_spliter_a = requestDto.p_pagevalue.Split('~');
+
+                try
+                {
+                    WriteToFile("<SBI Payment Posting Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                    string uniqueRequestId = v_spliter_a.Length > 0 ? v_spliter_a[0].Trim() : "";
+                    string corporateCode = (v_spliter_a.Length > 1 && !string.IsNullOrWhiteSpace(v_spliter_a[1])) ? v_spliter_a[1].Trim() : _defaultCorporateCode;
+                    string corporateProductCode = (v_spliter_a.Length > 2 && !string.IsNullOrWhiteSpace(v_spliter_a[2])) ? v_spliter_a[2].Trim() : _defaultCorporateProductCode;
+                    string corporateRefNo = v_spliter_a.Length > 3 ? v_spliter_a[3].Trim() : "";
+                    string debitAccountNumber = v_spliter_a.Length > 4 ? v_spliter_a[4].Trim() : "";
+                    string beneAccNo = v_spliter_a.Length > 5 ? v_spliter_a[5].Trim() : "";
+                    string beneName = v_spliter_a.Length > 6 ? v_spliter_a[6].Trim() : "";
+                    string bicCode = v_spliter_a.Length > 7 ? v_spliter_a[7].Trim() : "";
+                    string paymentAmount = v_spliter_a.Length > 8 ? v_spliter_a[8].Trim() : "";
+                    string paymentMethodName = (v_spliter_a.Length > 9 && !string.IsNullOrWhiteSpace(v_spliter_a[9])) ? v_spliter_a[9].Trim() : "NEFT";
+                    string executionDate = (v_spliter_a.Length > 10 && !string.IsNullOrWhiteSpace(v_spliter_a[10]))
+                        ? v_spliter_a[10].Trim()
+                        : DateTime.Now.ToString("dd-MMM-yyyy").ToUpperInvariant();
+                    string remarks = v_spliter_a.Length > 11 ? v_spliter_a[11].Trim() : "";
+                    string paymentInstruction1 = v_spliter_a.Length > 12 ? v_spliter_a[12].Trim() : "";
+                    string beneCode = v_spliter_a.Length > 13 ? v_spliter_a[13].Trim() : "";
+                    string beneAddress1 = v_spliter_a.Length > 14 ? v_spliter_a[14].Trim() : "";
+                    string chargeBournedBy = v_spliter_a.Length > 15 ? v_spliter_a[15].Trim() : "";
+                    string remittanceCode = v_spliter_a.Length > 16 ? v_spliter_a[16].Trim() : "";
+                    bool stat = false;
+
+                    var txnItem = new JObject
+                    {
+                        ["bankSortCode"] = "",
+                        ["beneAccNo"] = beneAccNo,
+                        ["beneAddress1"] = beneAddress1,
+                        ["beneAddress2"] = "",
+                        ["beneAddress3"] = "",
+                        ["beneCode"] = beneCode,
+                        ["beneName"] = beneName,
+                        ["bicCode"] = bicCode,
+                        ["chargeBournedBy"] = chargeBournedBy,
+                        ["corporateRefNo"] = corporateRefNo,
+                        ["debitAccountNumber"] = debitAccountNumber,
+                        ["executionDate"] = executionDate,
+                        ["intermediaryBankBICCode"] = "",
+                        ["payableCurrency"] = "INR",
+                        ["paymentAmount"] = paymentAmount,
+                        ["paymentInstruction1"] = paymentInstruction1,
+                        ["paymentInstruction2"] = "",
+                        ["paymentInstruction3"] = "",
+                        ["paymentInstruction4"] = "",
+                        ["paymentMethodName"] = paymentMethodName,
+                        ["remarks"] = remarks,
+                        ["remittanceCode"] = remittanceCode
+                    };
+
+                    var postingObj = new JObject
+                    {
+                        ["corporateCode"] = corporateCode,
+                        ["transactionDetails"] = new JArray { txnItem },
+                        ["uniqueRequestId"] = uniqueRequestId
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(corporateProductCode))
+                    {
+                        postingObj["corporateProductCode"] = corporateProductCode;
+                    }
+
+                    // 1. Sort TransactionCreationRequest alphabetically & sign for HASH
+                    JObject sortedPostingObj = (JObject)SortJsonAlphabetically(postingObj);
+                    string canonicalInnerJson = sortedPostingObj.ToString(Formatting.None);
+
+                    string innerHash;
+                    using (X509Certificate2 privCert = GetChannelPrivateCertificate())
+                    using (RSA privKey = privCert.GetRSAPrivateKey())
+                    {
+                        innerHash = SignDataSha256Rsa(canonicalInnerJson, privKey);
+                    }
+
+                    // 2. Build plain wrapper REQUEST JSON
+                    var plainWrapper = new JObject
+                    {
+                        ["EIS_PAYLOAD"] = new JObject
+                        {
+                            ["TransactionCreationRequest"] = sortedPostingObj,
+                            ["HASH"] = innerHash
+                        },
+                        ["SOURCE_ID"] = _sbiSourceId,
+                        ["DESTINATION"] = _sbiDestination,
+                        ["TXN_TYPE"] = _sbiTxnType,
+                        ["TXN_SUB_TYPE"] = "POSTING"
+                    };
+
+                    string plainRequestJson = plainWrapper.ToString(Formatting.None);
+                    WriteToFile("SBI Posting Plain Request: " + plainRequestJson);
+
+                    // 3. Generate RRN & 32-char keyboard AES key
+                    string rrn = GenerateRequestReferenceNumber();
+                    string dynamicAesKey = GenerateKeyboardAesKey(32);
+                    byte[] aesKeyBytes = Encoding.UTF8.GetBytes(dynamicAesKey);
+
+                    // 4. Encrypt plain REQUEST (AES-256-GCM, IV = first 12 bytes of key)
+                    string encryptedRequest = EncryptAesGcmSbi(plainRequestJson, aesKeyBytes);
+
+                    // 5. Sign plain REQUEST for outer DIGI_SIGN & RSA-encrypt AES key for AccessToken header
+                    string digiSign;
+                    using (X509Certificate2 privCert = GetChannelPrivateCertificate())
+                    using (RSA privKey = privCert.GetRSAPrivateKey())
+                    {
+                        digiSign = SignDataSha256Rsa(plainRequestJson, privKey);
+                    }
+
+                    string accessToken;
+                    using (X509Certificate2 eisCert = GetEisPublicCertificate())
+                    using (RSA eisPubKey = eisCert.GetRSAPublicKey())
+                    {
+                        byte[] encryptedKeyBytes = eisPubKey.Encrypt(aesKeyBytes, _rsaOaepPadding);
+                        accessToken = Convert.ToBase64String(encryptedKeyBytes);
+                    }
+
+                    using (HttpClient client = new HttpClient())
+                    {
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("AccessToken", accessToken);
+
+                        string json = JsonConvert.SerializeObject(new
+                        {
+                            REQUEST_REFERENCE_NUMBER = rrn,
+                            REQUEST = encryptedRequest,
+                            DIGI_SIGN = digiSign
+                        });
+
+                        WriteToFile("SBI Posting Encrypted Request JSON: " + json);
+
+                        var content = new StringContent(json, Encoding.UTF8, "application/json");
+                        var httpResponse = await client.PostAsync(_sbiWrapperUrl, content);
+                        string response = await httpResponse.Content.ReadAsStringAsync();
+                        WriteToFile("SBI Posting Raw Response JSON: " + response);
+
+                        if (!httpResponse.IsSuccessStatusCode)
+                        {
+                            rvalue = new { status = "9", data = response };
+                            WriteToFile("SBI Posting API Error: " + response);
+                        }
+                        else
+                        {
+                            JObject joResponse = JObject.Parse(response);
+                            string resData = joResponse.SelectToken("RESPONSE")?.ToString() ?? "Error";
+                            string resDigiSign = joResponse.SelectToken("DIGI_SIGN")?.ToString();
+
+                            if (resData != "Error" && !string.IsNullOrEmpty(resData))
+                            {
+                                string decData = DecryptAesGcmSbi(resData, aesKeyBytes);
+                                WriteToFile("SBI Posting Final Decrypted Result: " + decData);
+
+                                if (!string.IsNullOrWhiteSpace(resDigiSign))
+                                {
+                                    bool isVerified;
+                                    using (X509Certificate2 eisCert = GetEisPublicCertificate())
+                                    using (RSA eisPubKey = eisCert.GetRSAPublicKey())
+                                    {
+                                        isVerified = VerifyDataSha256Rsa(decData, resDigiSign, eisPubKey);
+                                    }
+
+                                    if (!isVerified)
+                                    {
+                                        WriteToFile("SBI Posting Response DIGI_SIGN Verification Failed");
+                                        return new { status = "9", data = "Response digital signature verification failed" };
+                                    }
+                                }
+
+                                JObject jodecResponse = JObject.Parse(decData);
+                                if (jodecResponse["EIS_RESPONSE"] != null && jodecResponse["EIS_RESPONSE"].Type == JTokenType.String)
+                                {
+                                    string eisStr = jodecResponse["EIS_RESPONSE"].ToString();
+                                    if (!string.IsNullOrWhiteSpace(eisStr))
+                                    {
+                                        try { jodecResponse["EIS_RESPONSE"] = JToken.Parse(eisStr); } catch { }
+                                    }
+                                }
+
+                                string wrapperStatus = jodecResponse.SelectToken("RESPONSE_STATUS")?.ToString() ?? "";
+                                string respCode = jodecResponse.SelectToken("EIS_RESPONSE.TransactionCreationResponse.responseCode")?.ToString() ?? "";
+                                string respMsg = jodecResponse.SelectToken("EIS_RESPONSE.TransactionCreationResponse.responseMessage")?.ToString() ?? "";
+
+                                if (wrapperStatus == "0" && (respCode == "00" || respMsg.Equals("ACCEPTED", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    stat = true;
+                                }
+
+                                rvalue = new { status = stat ? "1" : "9", data = jodecResponse };
+                            }
+                            else
+                            {
+                                rvalue = new { status = "9", data = joResponse };
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    rvalue = new { status = "9", data = ex.Message };
+                    WriteToFile("SBI Payment Posting Error: " + ex.Message);
+                }
+
+                WriteToFile("<SBI Payment Posting End> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+                return rvalue;
+            }
+            else if (requestDto.p_flag == "SBI_PAYMENT_ENQUIRY")
+            {
+                dynamic rvalue = null;
+                // Format: uniqueRequestId(0)~corporateCode(1)~batchNo(2)~transactionRequestId(3)~transactionRefNo(4)
+                string[] v_spliter_a = requestDto.p_pagevalue.Split('~');
+
+                try
+                {
+                    WriteToFile("<SBI Payment Enquiry Start> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+
+                    string uniqueRequestId = v_spliter_a.Length > 0 ? v_spliter_a[0].Trim() : "";
+                    string corporateCode = (v_spliter_a.Length > 1 && !string.IsNullOrWhiteSpace(v_spliter_a[1])) ? v_spliter_a[1].Trim() : _defaultCorporateCode;
+                    string batchNo = v_spliter_a.Length > 2 ? v_spliter_a[2].Trim() : "";
+                    string transactionRequestId = v_spliter_a.Length > 3 ? v_spliter_a[3].Trim() : "";
+                    string transactionRefNo = v_spliter_a.Length > 4 ? v_spliter_a[4].Trim() : "";
+                    bool stat = false;
+
+                    var enquiryObj = new JObject
+                    {
+                        ["batchNo"] = batchNo,
+                        ["corporateCode"] = corporateCode,
+                        ["transactionRefNo"] = transactionRefNo,
+                        ["transactionRequestId"] = transactionRequestId,
+                        ["uniqueRequestId"] = uniqueRequestId
+                    };
+
+                    // 1. Sort TransactionEnquiryRequest alphabetically & sign for HASH
+                    JObject sortedEnquiryObj = (JObject)SortJsonAlphabetically(enquiryObj);
+                    string canonicalInnerJson = sortedEnquiryObj.ToString(Formatting.None);
+
+                    string innerHash;
+                    using (X509Certificate2 privCert = GetChannelPrivateCertificate())
+                    using (RSA privKey = privCert.GetRSAPrivateKey())
+                    {
+                        innerHash = SignDataSha256Rsa(canonicalInnerJson, privKey);
+                    }
+
+                    // 2. Build plain wrapper REQUEST JSON
+                    var plainWrapper = new JObject
+                    {
+                        ["EIS_PAYLOAD"] = new JObject
+                        {
+                            ["TransactionEnquiryRequest"] = sortedEnquiryObj,
+                            ["HASH"] = innerHash
+                        },
+                        ["SOURCE_ID"] = _sbiSourceId,
+                        ["DESTINATION"] = _sbiDestination,
+                        ["TXN_TYPE"] = _sbiTxnType,
+                        ["TXN_SUB_TYPE"] = "ENQUIRY"
+                    };
+
+                    string plainRequestJson = plainWrapper.ToString(Formatting.None);
+                    WriteToFile("SBI Enquiry Plain Request: " + plainRequestJson);
+
+                    // 3. Generate RRN & 32-char keyboard AES key
+                    string rrn = GenerateRequestReferenceNumber();
+                    string dynamicAesKey = GenerateKeyboardAesKey(32);
+                    byte[] aesKeyBytes = Encoding.UTF8.GetBytes(dynamicAesKey);
+
+                    // 4. Encrypt plain REQUEST (AES-256-GCM, IV = first 12 bytes of key)
+                    string encryptedRequest = EncryptAesGcmSbi(plainRequestJson, aesKeyBytes);
+
+                    // 5. Sign plain REQUEST for outer DIGI_SIGN & RSA-encrypt AES key for AccessToken header
+                    string digiSign;
+                    using (X509Certificate2 privCert = GetChannelPrivateCertificate())
+                    using (RSA privKey = privCert.GetRSAPrivateKey())
+                    {
+                        digiSign = SignDataSha256Rsa(plainRequestJson, privKey);
+                    }
+
+                    string accessToken;
+                    using (X509Certificate2 eisCert = GetEisPublicCertificate())
+                    using (RSA eisPubKey = eisCert.GetRSAPublicKey())
+                    {
+                        byte[] encryptedKeyBytes = eisPubKey.Encrypt(aesKeyBytes, _rsaOaepPadding);
+                        accessToken = Convert.ToBase64String(encryptedKeyBytes);
+                    }
+
+                    using (HttpClient client = new HttpClient())
+                    {
+                        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("AccessToken", accessToken);
+
+                        string json = JsonConvert.SerializeObject(new
+                        {
+                            REQUEST_REFERENCE_NUMBER = rrn,
+                            REQUEST = encryptedRequest,
+                            DIGI_SIGN = digiSign
+                        });
+
+                        WriteToFile("SBI Enquiry Encrypted Request JSON: " + json);
+
+                        var content = new StringContent(json, Encoding.UTF8, "application/json");
+                        var httpResponse = await client.PostAsync(_sbiWrapperUrl, content);
+                        string response = await httpResponse.Content.ReadAsStringAsync();
+                        WriteToFile("SBI Enquiry Raw Response JSON: " + response);
+
+                        if (!httpResponse.IsSuccessStatusCode)
+                        {
+                            rvalue = new { status = "9", data = response };
+                            WriteToFile("SBI Enquiry API Error: " + response);
+                        }
+                        else
+                        {
+                            JObject joResponse = JObject.Parse(response);
+                            string resData = joResponse.SelectToken("RESPONSE")?.ToString() ?? "Error";
+                            string resDigiSign = joResponse.SelectToken("DIGI_SIGN")?.ToString();
+
+                            if (resData != "Error" && !string.IsNullOrEmpty(resData))
+                            {
+                                string decData = DecryptAesGcmSbi(resData, aesKeyBytes);
+                                WriteToFile("SBI Enquiry Final Decrypted Result: " + decData);
+
+                                if (!string.IsNullOrWhiteSpace(resDigiSign))
+                                {
+                                    bool isVerified;
+                                    using (X509Certificate2 eisCert = GetEisPublicCertificate())
+                                    using (RSA eisPubKey = eisCert.GetRSAPublicKey())
+                                    {
+                                        isVerified = VerifyDataSha256Rsa(decData, resDigiSign, eisPubKey);
+                                    }
+
+                                    if (!isVerified)
+                                    {
+                                        WriteToFile("SBI Enquiry Response DIGI_SIGN Verification Failed");
+                                        return new { status = "9", data = "Response digital signature verification failed" };
+                                    }
+                                }
+
+                                JObject jodecResponse = JObject.Parse(decData);
+                                if (jodecResponse["EIS_RESPONSE"] != null && jodecResponse["EIS_RESPONSE"].Type == JTokenType.String)
+                                {
+                                    string eisStr = jodecResponse["EIS_RESPONSE"].ToString();
+                                    if (!string.IsNullOrWhiteSpace(eisStr))
+                                    {
+                                        try { jodecResponse["EIS_RESPONSE"] = JToken.Parse(eisStr); } catch { }
+                                    }
+                                }
+
+                                string wrapperStatus = jodecResponse.SelectToken("RESPONSE_STATUS")?.ToString() ?? "";
+                                string batchStatus = jodecResponse.SelectToken("EIS_RESPONSE.TransactionEnquiryResponse.batchStatus")?.ToString() ?? "";
+
+                                if (wrapperStatus == "0" &&
+                                    (batchStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) ||
+                                     batchStatus.Equals("PARTIALLY SUCCESSFUL", StringComparison.OrdinalIgnoreCase) ||
+                                     batchStatus.Equals("PARTIALLY SUCESSFUL", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    stat = true;
+                                }
+
+                                rvalue = new { status = stat ? "1" : "9", data = jodecResponse };
+                            }
+                            else
+                            {
+                                rvalue = new { status = "9", data = joResponse };
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    rvalue = new { status = "9", data = ex.Message };
+                    WriteToFile("SBI Payment Enquiry Error: " + ex.Message);
+                }
+
+                WriteToFile("<SBI Payment Enquiry End> " + DateTime.Now.ToString("dd/MM/yyyy hh:mm:tt"));
+                return rvalue;
+            }
+
+            var res = await _repo.IciciDcPostRepo(requestDto);
+            return res;
+        }
+
+        public async Task<dynamic> SbiDcPostService(PostReqDto postReqDto)
+        {
+            PostReqDto requestDto = new PostReqDto();
+            requestDto.p_flag = postReqDto.p_flag;
+            requestDto.p_pagevalue = postReqDto.p_pagevalue;
+            requestDto.p_paravalue = postReqDto.p_paravalue;
+
+            var res = await _repo.IciciDcPostRepo(requestDto);
+            return res;
+        }
+
+        #region SBI DC Services
+
+        public static string GenerateKeyboardAesKey(int length = 32)
+        {
+            char[] chars = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                chars[i] = KeyboardKeyChars[RandomNumberGenerator.GetInt32(KeyboardKeyChars.Length)];
+            }
+            return new string(chars);
+        }
+
+        public static string EncryptAesGcmSbi(string plainText, byte[] keyBytes)
+        {
+            byte[] iv = new byte[12];
+            Buffer.BlockCopy(keyBytes, 0, iv, 0, 12);
+
+            byte[] plaintextBytes = Encoding.UTF8.GetBytes(plainText);
+            byte[] ciphertext = new byte[plaintextBytes.Length];
+            byte[] tag = new byte[16];
+
+            using (AesGcm aesGcm = new AesGcm(keyBytes, 16))
+            {
+                aesGcm.Encrypt(iv, plaintextBytes, ciphertext, tag);
+            }
+
+            byte[] combined = new byte[ciphertext.Length + tag.Length];
+            Buffer.BlockCopy(ciphertext, 0, combined, 0, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, combined, ciphertext.Length, tag.Length);
+
+            return Convert.ToBase64String(combined);
+        }
+
+        public static string DecryptAesGcmSbi(string base64CipherTextWithTag, byte[] keyBytes)
+        {
+            byte[] iv = new byte[12];
+            Buffer.BlockCopy(keyBytes, 0, iv, 0, 12);
+
+            byte[] combined = Convert.FromBase64String(base64CipherTextWithTag);
+            int ciphertextLength = combined.Length - 16;
+
+            byte[] ciphertext = new byte[ciphertextLength];
+            byte[] tag = new byte[16];
+
+            Buffer.BlockCopy(combined, 0, ciphertext, 0, ciphertextLength);
+            Buffer.BlockCopy(combined, ciphertextLength, tag, 0, 16);
+
+            byte[] plaintextBytes = new byte[ciphertextLength];
+            using (AesGcm aesGcm = new AesGcm(keyBytes, 16))
+            {
+                aesGcm.Decrypt(iv, ciphertext, tag, plaintextBytes);
+            }
+
+            return Encoding.UTF8.GetString(plaintextBytes);
+        }
+
+        public static string SignDataSha256Rsa(string plainData, RSA privateKey)
+        {
+            byte[] dataBytes = Encoding.UTF8.GetBytes(plainData);
+            byte[] signatureBytes = privateKey.SignData(dataBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return Convert.ToBase64String(signatureBytes);
+        }
+
+        public static bool VerifyDataSha256Rsa(string plainData, string base64Signature, RSA publicKey)
+        {
+            byte[] dataBytes = Encoding.UTF8.GetBytes(plainData);
+            byte[] signatureBytes = Convert.FromBase64String(base64Signature);
+            return publicKey.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        }
+
+        public static JToken SortJsonAlphabetically(JToken token)
+        {
+            if (token is JObject obj)
+            {
+                var sorted = new JObject();
+                foreach (var prop in obj.Properties().OrderBy(p => p.Name, StringComparer.Ordinal))
+                {
+                    sorted.Add(prop.Name, SortJsonAlphabetically(prop.Value));
+                }
+                return sorted;
+            }
+            if (token is JArray arr)
+            {
+                return new JArray(arr.Select(SortJsonAlphabetically));
+            }
+            return token;
+        }
+
+        private string GenerateRequestReferenceNumber()
+        {
+            DateTime now = DateTime.Now;
+            string yy = now.ToString("yy");
+            string ddd = now.DayOfYear.ToString("D3");
+            string time = now.ToString("HHmmssfff");
+
+            if (_sbiSourceId.Length == 5)
+            {
+                long seq = Interlocked.Increment(ref _rrnSequence) % 1000;
+                return $"SBI{_sbiSourceId}{yy}{ddd}{time}{seq:D3}";
+            }
+            else
+            {
+                string src2 = _sbiSourceId.Length >= 2 ? _sbiSourceId.Substring(0, 2) : _sbiSourceId.PadRight(2, '0');
+                long seq = Interlocked.Increment(ref _rrnSequence) % 1000000;
+                return $"SBI{src2}{yy}{ddd}{time}{seq:D6}";
+            }
+        }
+
+        private X509Certificate2 GetEisPublicCertificate()
+        {
+            string path = Path.Combine(_certRootPath, "Certificates", "SBI_Public_cer", _eisPublicCertFile);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"SBI EIS public certificate not found at: {path}");
+            }
+
+            X509Certificate2 certificate = new X509Certificate2(path);
+            WriteToFile("<SBI EIS PUBLIC KEY PATH> " + path);
+            return certificate;
+        }
+
+        private X509Certificate2 GetChannelPrivateCertificate()
+        {
+            string path = Path.Combine(_certRootPath, "Certificates", "SBI_Private_cer", _channelPrivateCertFile);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"SBI private PFX certificate not found at: {path}");
+            }
+
+            X509Certificate2 certificate = new X509Certificate2(path, _channelPrivateCertPassword, X509KeyStorageFlags.PersistKeySet);
+            WriteToFile("<SBI PRIVATE CERT PATH> " + path);
+            if (certificate.HasPrivateKey)
+            {
+                return certificate;
+            }
+            WriteToFile($"<KEY IS NULL>{_channelPrivateCertFile}");
+            return null;
+        }
+
+        public void WriteToFile(string Message)
+        {
+            string path = Path.Combine(_certRootPath, "Logs");
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+
+            string dateStr = DateTime.Now.ToString("yyyy_MM_dd");
+            string filepath = Path.Combine(path, $"SbiServiceLog_{dateStr}.txt");
+
+            using (StreamWriter sw = new StreamWriter(filepath, append: true))
+            {
+                sw.WriteLine(Message);
+            }
+        }
+
+        #endregion
+    }
+}
+
