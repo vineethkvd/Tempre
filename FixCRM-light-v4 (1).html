@@ -1,277 +1,50 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Business.Helpers
 {
     public class LogCleanupService
     {
         private readonly string _logDirectory;
+        private readonly int _retentionMonths;
+        private static readonly string[] LogExtensions = { ".log", ".txt" };
 
-        public LogCleanupService(string logDirectory)
+        public LogCleanupService(string logDirectory, int retentionMonths = 7)
         {
             _logDirectory = logDirectory;
+            _retentionMonths = retentionMonths > 0 ? retentionMonths : 7;
         }
 
         public void CleanupOldLogs()
         {
             if (!Directory.Exists(_logDirectory))
             {
-                // Create the directory if it does not exist
                 Directory.CreateDirectory(_logDirectory);
-                return; // Exit the method since there are no logs to clean
+                return;
             }
-            // Get today's date in the format used for log files
-            var today = DateTime.Now.ToString("yyyy-MM-dd"); // Adjust format as needed
-            var logFiles = Directory.GetFiles(_logDirectory, "*.log"); // Adjust extension if needed
+
+            // Delete any log file older than 7 months
+            DateTime cutoffDate = DateTime.Now.AddMonths(-_retentionMonths);
+
+            var logFiles = Directory.EnumerateFiles(_logDirectory, "*.*", SearchOption.AllDirectories)
+                .Where(file => LogExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
 
             foreach (var logFile in logFiles)
             {
-                var fileName = Path.GetFileName(logFile);
-                // Check if the file name does not contain today's date
-                if (!fileName.Contains(today))
+                try
                 {
-                    try
+                    DateTime lastWriteTime = File.GetLastWriteTime(logFile);
+                    if (lastWriteTime < cutoffDate)
                     {
                         File.Delete(logFile);
                     }
-                    catch (Exception ex)
-                    {
-                        // Handle exceptions (e.g., log the error)
-                        Console.WriteLine($"Error deleting file {logFile}: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting file {logFile}: {ex.Message}");
                 }
             }
         }
     }
 }
-using Business.Contracts;
-using Business.Helpers;
-using Business.Services;
-using DataAccess.Context;
-using DataAccess.Contracts;
-using DataAccess.Dto;
-using DataAccess.Dto.Request;
-using DataAccess.Dto.Response;
-using DataAccess.Entities;
-using DataAccess.Repository;
-using DotNetEnv;
-using FluentValidation;
-using ICICI_DC_WebApi.Extensions;
-using ICICI_DC_WebApi.Validators;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using NLog.Extensions.Logging;
-using NLog.Web;
-using System.Text;
-using System.Threading.RateLimiting;
-
-var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
-if (!File.Exists(envFilePath))
-{
-    envFilePath = Path.Combine(AppContext.BaseDirectory, ".env");
-}
-if (File.Exists(envFilePath))
-{
-    Env.Load(envFilePath);
-}
-
-var builder = WebApplication.CreateBuilder(args);
-
-// --- 1. Logging Configuration (NLog) ---
-var logPath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
-if (!Directory.Exists(logPath))
-{
-    Directory.CreateDirectory(logPath);
-}
-
-NLog.GlobalDiagnosticsContext.Set("LogDirectory", logPath);
-builder.Logging.ClearProviders();
-builder.Host.UseNLog();
-
-// ---  Runtime Tasks (Log Cleanup) ---
-try
-{
-    var logCleanupService = new LogCleanupService(logPath);
-    logCleanupService.CleanupOldLogs();
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Log cleanup failed: {ex.Message}");
-}
-
-// ---  Rate Limiter Configuration ---
-var permitLimit = builder.Configuration.GetValue<int>("RateLimitSettings:PermitLimit", 200);
-var windowMinutes = builder.Configuration.GetValue<int>("RateLimitSettings:WindowMinutes", 1);
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.AddPolicy("FixedPolicy", httpContext =>
-    {
-        var walletId = httpContext.User?.Claims?.FirstOrDefault(c => c.Type == "WalletId")?.Value;
-        var ipAddress = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-
-        if (string.IsNullOrEmpty(ipAddress))
-        {
-            ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
-        }
-
-        var partitionKey = !string.IsNullOrEmpty(walletId) ? walletId :
-                           !string.IsNullOrEmpty(ipAddress) ? ipAddress :
-                           "unknown";
-
-        return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: partitionKey,
-            factory: partition => new FixedWindowRateLimiterOptions
-            {
-                AutoReplenishment = true,
-                PermitLimit = permitLimit,
-                Window = TimeSpan.FromMinutes(windowMinutes),
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 0
-            });
-    });
-});
-
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "ICICIDC WebApi",
-        Version = "v1"
-    });
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "Standard Authorization header using the Bearer scheme (\"bearer {token}\")",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT"
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
-
-builder.Services.AddTransient<DapperContext>();
-builder.Services.AddTransient<ILoggerService, LoggerService>();
-builder.Services.AddTransient<ResDto>();
-builder.Services.AddTransient<IciciDcRepo>();
-
-var projectRootDirectory = Directory.GetCurrentDirectory();
-
-builder.Services.AddTransient<IServiceWrapper, ServiceWrapper>(provider =>
-    new ServiceWrapper(
-        provider.GetRequiredService<IciciDcRepo>(),
-        provider.GetRequiredService<DtoWrapper>(),
-        provider.GetRequiredService<ILoggerService>(),
-        provider.GetRequiredService<IConfiguration>(),
-        provider.GetRequiredService<CommonValidationHelper>(),
-        provider.GetRequiredService<CryptoHelper>(),
-        provider.GetRequiredService<IHttpClientFactory>(),
-        projectRootDirectory
-    )
-);
-
-builder.Services.AddTransient<IIciciDcService, IciciDcService>(provider =>
-    new IciciDcService(
-        provider.GetRequiredService<IciciDcRepo>(),
-        provider.GetRequiredService<IConfiguration>(),
-        provider.GetRequiredService<CryptoHelper>(),
-        provider.GetRequiredService<IHttpClientFactory>(),
-        projectRootDirectory
-    )
-);
-//builder.Services.AddHostedService<IciciDcBackGroundService>();
-builder.Services.AddTransient<HelperWrapper>();
-builder.Services.AddTransient<DtoWrapper>();
-builder.Services.AddTransient<ErrorResponse>();
-builder.Services.AddTransient<IJwtUtils, JwtUtils>();
-builder.Services.AddTransient<IValidator<PostEncReqDto>, CommonValidators>();
-builder.Services.AddTransient<CommonValidationHelper>();
-builder.Services.AddTransient<CryptoHelper>();
-
-builder.Services.AddAuthentication(x =>
-{
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(o =>
-{
-    var Key = Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]);
-    o.SaveToken = true;
-    o.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JWT:Issuer"],
-        ValidAudience = builder.Configuration["JWT:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Key)
-    };
-});
-
-builder.Services.Configure<IISOptions>(options =>
-{
-    options.AutomaticAuthentication = false;
-});
-
-builder.Services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
-{
-    builder.AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-    .SetIsOriginAllowed((host) => true);
-}));
-
-builder.Services.AddHttpClient();
-
-builder.Services.AddControllers()
-    .AddNewtonsoftJson(x =>
-    x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ICICI_DC_Api V1.0");
-    });
-}
-
-app.UseRouting();
-app.UseRateLimiter();
-app.UseCors("MyPolicy");
-app.UseMiddleware<CorsMiddleWare>();
-app.UseMiddleware<JwtMiddleWareExtension>();
-app.UseMiddleware<ExceptionMiddleWare>();
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
-
-
