@@ -1,1 +1,23 @@
 
+1. Flag: BENEFICIARY_REGISTRATION (Account Number & IFSC)
+Format: CrpId~CrpUsr~BnfName~BnfNickName~BnfAccNo~PayeeType~IFSC~AGGR_ID~URN
+Plain pagevalue (ICICI / Within Bank sample from doc):
+SESPRODUCT~389018~PratikMundhe~Pratik~000405002777~W~ICIC0000011~XXX~XXX
+
+Plain pagevalue (Other Bank sample using doc values):
+SESPRODUCT~389018~PratikMundhe~PratikOther1~000451000315~O~SBIN0003060~XXX~XXX
+
+ * PayeeType: Use W for ICICI Bank (ICIC0000011) and O for other banks.
+ * BnfNickName: Must be unique for every new registration request.
+ * CrpId, CrpUsr, AGGR_ID, URN: Replace SESPRODUCT, 389018, and XXX with your actual UAT credentials and the same URN used during CIB Registration.
+2. Flag: BENEFICIARY_REGISTRATION_VPA (UPI VPA)
+Format: aggrID~corpID~userID~urn~vpa
+Plain pagevalue (VPA sample from doc):
+XXX~SESPRODUCT~389018~XXX~test0@icici
+
+ * vpa: Can also use <AccountNumber>@<IFSC>.ifsc.npci for account-and-IFSC VPA registration.
+Testing Checklist
+ * paravalue: Pass the OAuth access_token returned by your GENERATE_OAUTH_TOKEN flag (required in the Authorization: Bearer header).
+ * Verify Registration Status: Re-firing the same beneficiary request returns a "Beneficiary already registered" response.
+ * Payout Cooling Period: Wait 30 minutes after a successful registration before initiating a payment to that beneficiary.
+   
