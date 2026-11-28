@@ -1,1 +1,72 @@
 
+using Business.Contracts;
+using DataAccess.Dto.Request;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace ICICI_DC_Scheduler.Schedulers
+{
+    public class IciciDcWorker(
+        ILogger<IciciDcWorker> logger,
+        IServiceWrapper service,
+        IConfiguration configuration) : BackgroundService
+    {
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            int intervalMinutes = configuration.GetValue<int>("Schedule:IntervalMinutes", 15);
+            if (intervalMinutes <= 0)
+            {
+                intervalMinutes = 15;
+            }
+
+            logger.LogInformation("IciciDcWorker started. Polling every {Interval} minutes.", intervalMinutes);
+
+            await ProcessSchedulerAsync();
+
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(intervalMinutes));
+
+            try
+            {
+                while (await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    await ProcessSchedulerAsync();
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                logger.LogInformation("IciciDcWorker stopped.");
+            }
+        }
+
+        private async Task ProcessSchedulerAsync()
+        {
+            try
+            {
+                logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
+
+                var postReqDto = new PostReqDto
+                {
+                    p_flag = "ICICIDC",
+                    p_pagevalue = "1",
+                    p_paravalue = "1"
+                };
+
+                var data = await service.icici_service.ICICI_DC_SchedulerPostService(postReqDto);
+
+                if (data == null)
+                {
+                    logger.LogWarning("ICICI_DC_SchedulerPostService returned null.");
+                }
+                else
+                {
+                    logger.LogInformation("ICICI_DC_SchedulerPostService completed: {Result}", data);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in IciciDcWorker");
+            }
+        }
+    }
+}
