@@ -1,1 +1,125 @@
 
+using Dapper;
+using Dapper.Oracle;
+using DataAccess.Context;
+using DataAccess.Contracts;
+using DataAccess.Dto.Request;
+using System.Data;
+
+namespace DataAccess.Repository
+{
+    public class ICICI_DC_SchedulersRepo : IICICI_DC_SchedulersRepo
+    {
+        private readonly DapperContext _context;
+
+        public ICICI_DC_SchedulersRepo(DapperContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<dynamic> IICICI_DC_SchedulerRepo(PostReqDto reqDto)
+        {
+            using var connection = _context.CreateConnection();
+            string[] v_spliter_a = (reqDto.p_pagevalue ?? string.Empty).Split('*');
+            dynamic response;
+
+            if (reqDto.p_flag == "EMPDETAILS")
+            {
+                var empId = v_spliter_a[0];
+                var empDetails = await connection.QueryAsync<dynamic>(
+                    @"SELECT t.emp_code,
+                      t.emp_name,
+                      t.branch_id, b.branch_name,
+                      t.designation_id, t.department_id,
+                      t.post_id
+                     FROM employee_master t, branch_master b
+                     WHERE t.branch_id = b.branch_id
+                     AND t.emp_code = :emp_id 
+                     AND t.status_id = 1",
+                    new { emp_id = empId });
+
+                response = new { response = empDetails };
+            }
+            else if (reqDto.p_flag == "GENERATE_TOKEN")
+            {
+                var walletId = v_spliter_a.Length > 0 ? v_spliter_a[0]?.Trim() : string.Empty;
+                var unqRefId = v_spliter_a.Length > 1 ? v_spliter_a[1]?.Trim() : string.Empty;
+
+                var transaction = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                    @"SELECT WALLET_ID, TRAN_ID, TRAN_STATUS 
+                      FROM makash.tbl_makash_tran
+                      WHERE WALLET_ID = :wallet_id 
+                        AND unq_req_id = :unq_req_id 
+                        AND TRAN_STATUS = 2",
+                    new { wallet_id = walletId, unq_req_id = unqRefId });
+
+                response = transaction == null
+                    ? new { response = "0~unable to generate token" }
+                    : new { response = "1~Success" };
+            }
+            else if (reqDto.p_flag == "GET_PENDING_TRANSACTIONS")
+            {
+                var pendingTransactions = await connection.QueryAsync<dynamic>(
+                    @"SELECT WALLET_ID, TRAN_ID, UNQ_REQ_ID, TRAN_STATUS
+                      FROM makash.tbl_makash_tran
+                      WHERE TRAN_STATUS = 2");
+
+                response = new { response = pendingTransactions };
+            }
+            else if (reqDto.p_flag == "UPDATE_IMPS_SUCCESS")
+            {
+                var parameters = new OracleDynamicParameters();
+                parameters.Add("p_flag", "505", OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_pageval", "2", OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_paraval", reqDto.p_paravalue, OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_as_outresult", dbType: OracleMappingType.RefCursor, direction: ParameterDirection.Output);
+                parameters.BindByName = true;
+
+                var procResult = await connection.QueryAsync<dynamic>(
+                    "proc_hrm_common_select",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                response = new { response = procResult };
+            }
+            else if (reqDto.p_flag == "UPDATE_IMPS_FAILED")
+            {
+                var parameters = new OracleDynamicParameters();
+                parameters.Add("p_flag", "505", OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_pageval", "3", OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_paraval", reqDto.p_paravalue, OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_as_outresult", dbType: OracleMappingType.RefCursor, direction: ParameterDirection.Output);
+                parameters.BindByName = true;
+
+                var procResult = await connection.QueryAsync<dynamic>(
+                    "proc_hrm_common_select",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                response = new { response = procResult };
+            }
+            else
+            {
+                var procedureName = "proc_Payment_Report_Get";
+                var parameters = new OracleDynamicParameters();
+
+                parameters.Add("p_flag", reqDto.p_flag, OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_pageval", reqDto.p_pagevalue, OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_paraval", reqDto.p_paravalue, OracleMappingType.NVarchar2, ParameterDirection.Input);
+                parameters.Add("p_as_outresult", dbType: OracleMappingType.RefCursor, direction: ParameterDirection.Output);
+                parameters.Add("p_ErrorMsg", dbType: OracleMappingType.NVarchar2, direction: ParameterDirection.Output, size: 4000);
+                parameters.Add("p_ErrorStat", dbType: OracleMappingType.NVarchar2, direction: ParameterDirection.Output, size: 4000);
+                parameters.BindByName = true;
+
+                var proc_result = await connection.QueryAsync<dynamic>(
+                    procedureName,
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                response = new { result = proc_result };
+            }
+
+            return response;
+        }
+    }
+}
